@@ -1,0 +1,140 @@
+#ifndef {{prefix}}_{{classname}}_H
+#define {{prefix}}_{{classname}}_H
+
+#include <drogon/drogon.h>
+#include <drogon/utils/Utilities.h>
+#include <json/json.h>
+#include <string>
+#include <optional>
+
+{{#imports}}{{{import}}}
+{{/imports}}
+
+{{#cppNamespace}}
+namespace {{this}} {
+{{/cppNamespace}}
+
+class {{classname}} {
+    std::string baseurl_path;
+    std::optional<std::string> bearer_token;
+    std::optional<std::string> basic_username;
+    std::optional<std::string> basic_password;
+    drogon::HttpClientPtr client;
+
+{{#operations}}
+    {{#operation}}
+
+    {{#summary}}
+    // {{.}}
+    {{/summary}}
+    {{#description}}
+    // {{.}}
+    {{/description}}
+    auto {{operationId}}(
+        {{#allParams}}
+        const {{{dataType}}}& _{{paramName}}{{^-last}}, {{/-last}}
+        {{/allParams}}
+    ){
+        {{#hasBodyParams}}
+        Json::Value json;
+        {{#bodyParams}}
+        json["{{paramName}}"] = _{{paramName}};
+        {{/bodyParams}}
+        auto req = drogon::HttpRequest::newHttpJsonRequest(json);
+        {{/hasBodyParams}}
+        {{^hasBodyParams}}
+        auto req = drogon::HttpRequest::newHttpRequest();
+        {{/hasBodyParams}}
+        req->setMethod(drogon::HttpMethod::{{#lambda.titlecase}}{{#lambda.lowercase}}{{httpMethod}}{{/lambda.lowercase}}{{/lambda.titlecase}});
+
+        std::string endpoint_path = "{{path}}";
+        std::vector<std::string> query_strs;
+        
+        {{#authMethods}}
+            {{#isApiKey}}
+                {{#isKeyInQuery}}
+        if (this->apikey.has_value()) {
+            query_strs.push_back("{{name}}="+this->apikey.value());
+        }
+                {{/isKeyInQuery}}
+                {{#isKeyInHeader}}
+        if (this->apikey.has_value()) {
+            req->addHeader("{{name}}", this->apikey.value());
+        }
+                {{/isKeyInHeader}}
+                {{#isKeyInCookie}}
+        if (this->apikey.has_value()) {
+            req->addCookie("{{name}}", this->apikey.value());
+        }
+                {{/isKeyInCookie}}
+            {{/isApiKey}}
+            {{#isBasicBearer}}
+        if (this->bearer_token.has_value()) {
+            req->addHeader("Authorization", "Bearer " + this->bearer_token.value());
+        }
+            {{/isBasicBearer}}
+            {{#isBasicBasic}}
+        if (this->basic_username.has_value() && this->basic_password.has_value()) {
+            std::string credential = this->basic_username.value() + ":" + this->basic_password.value();
+            auto encoded = drogon::utils::base64Encode(
+                reinterpret_cast<const byte*>(credential.c_str()),
+                credential.length());
+            req->addHeader("Authorization", "Basic " + encoded);
+        }
+            {{/isBasicBasic}}
+        {{/authMethods}}
+
+        {{#queryParams}}
+        query_strs.push_back("{{paramName}}=" + {{^isString}}std::to_string{{/isString}}(_{{paramName}}));
+        {{/queryParams}}
+        {{#pathParams}}
+        endpoint_path = std::regex_replace(endpoint_path, std::regex("{" "{{paramName}}" "}"), {{^isString}}std::to_string{{/isString}}(_{{paramName}}));
+        {{/pathParams}}
+        {{#headerParams}}
+        req->addHeader("{{paramName}}", {{^isString}}std::to_string{{/isString}}(_{{paramName}}));
+        {{/headerParams}}
+        {{#cookieParams}}
+        req->addCookie("{{paramName}}", {{^isString}}std::to_string{{/isString}}(_{{paramName}}));
+        {{/cookieParams}}
+        {{#formParams}}
+        {{^isFile}}
+        req->setParameter("{{paramName}}", {{^isString}}std::to_string{{/isString}}(_{{paramName}}));
+        {{/isFile}}
+        {{/formParams}}
+
+        std::string query_str_full;
+        for(const auto& query_str : query_strs) {
+            query_str_full += (query_str_full.empty() ? "?" : "&") + query_str;
+        }
+
+        req->setPath(baseurl_path + endpoint_path + query_str_full);
+
+        auto [result, response] = this->client->sendRequest(req);
+
+        {{#returnType}}
+        auto response_json = response->getJsonObject();
+        std::optional<{{{returnType}}}> response_object;
+
+        if(response_json) {
+            {{#returnTypeIsPrimitive}}
+            response_object.emplace(response_json.as<{{{returnType}}}>());
+            {{/returnTypeIsPrimitive}}
+            {{^returnTypeIsPrimitive}}
+            response_object.emplace(*response_json);
+            {{/returnTypeIsPrimitive}}
+        }
+        {{/returnType}}
+
+        return std::forward_as_tuple(result, response{{#returnType}}, response_object{{/returnType}});
+    }
+
+   {{/operation}}
+{{/operations}}
+
+};
+
+{{#cppNamespace}}
+}
+{{/cppNamespace}}
+
+#endif

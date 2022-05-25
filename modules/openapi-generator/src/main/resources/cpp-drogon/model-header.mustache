@@ -1,0 +1,70 @@
+#ifndef {{prefix}}_{{classname}}_H
+#define {{prefix}}_{{classname}}_H
+
+#include <drogon/drogon.h>
+#include <json/json.h>
+#include <string>
+#include <optional>
+
+{{#imports}}{{{import}}}
+{{/imports}}
+
+{{#cppNamespace}}
+namespace {{this}} {
+{{/cppNamespace}}
+
+{{#models}}
+{{#model}}
+{{#summary}}
+// {{.}}
+{{/summary}}
+{{#description}}
+// {{.}}
+{{/description}}
+struct {{classname}} {
+    {{#vars}}
+    {{{dataType}}} {{name}};
+    {{/vars}}
+
+    Json::Value toJson() const {
+        Json::Value _json;
+    {{#vars}}
+        {{#isContainer}}
+            {{#items}}
+        for(const auto& _item : {{name}}){
+                {{#isModel}}
+            _json["{{name}}"].append({{name}}.toJson());
+                {{/isModel}}
+                {{^isModel}}
+            _json["{{name}}"].append({{name}});
+                {{/isModel}}
+        }
+            {{/items}}
+        {{/isContainer}}
+        {{^isContainer}}
+            {{#isModel}}
+        _json["{{name}}"] = {{name}}.toJson();
+            {{/isModel}}
+            {{^isModel}}
+        _json["{{name}}"] = {{name}};
+            {{/isModel}}
+        {{/isContainer}}
+    {{/vars}}
+        return _json;
+    }
+    auto& fromJson(const Json::Value& _json) {
+        Json::Value _json;
+    {{#vars}}
+        {{name}} = _json["{{name}}"].as<{{{dataType}}}>();
+    {{/vars}}
+        return *this;
+    }
+};
+{{/model}}
+{{/models}}
+
+{{#cppNamespace}}
+}
+{{/cppNamespace}}
+
+#endif
