@@ -19,6 +19,7 @@ class {{classname}} {
     std::optional<std::string> bearer_token;
     std::optional<std::string> basic_username;
     std::optional<std::string> basic_password;
+    std::optional<std::string> apikey;
     drogon::HttpClientPtr client;
 
 {{#operations}}
@@ -32,7 +33,7 @@ class {{classname}} {
     {{/description}}
     auto {{operationId}}(
         {{#allParams}}
-        const {{{dataType}}}& _{{paramName}}{{^-last}}, {{/-last}}
+        const {{^required}}std::optional<{{/required}}{{{dataType}}}{{^required}}>{{/required}}& _{{paramName}}{{^-last}}, {{/-last}}
         {{/allParams}}
     ){
         {{#hasBodyParams}}
@@ -85,20 +86,35 @@ class {{classname}} {
         {{/authMethods}}
 
         {{#queryParams}}
-        query_strs.push_back("{{paramName}}=" + {{^isString}}std::to_string{{/isString}}(_{{paramName}}));
+        {{^required}}
+        if(_{{paramName}}.has_value())
+        {{/required}}
+        query_strs.push_back("{{paramName}}=" + {{^isString}}std::to_string{{/isString}}(_{{paramName}}{{^required}}.value(){{/required}}));
         {{/queryParams}}
         {{#pathParams}}
-        endpoint_path = std::regex_replace(endpoint_path, std::regex("{" "{{paramName}}" "}"), {{^isString}}std::to_string{{/isString}}(_{{paramName}}));
+        {{^required}}
+        if(_{{paramName}}.has_value())
+        {{/required}}
+        endpoint_path = std::regex_replace(endpoint_path, std::regex("{" "{{paramName}}" "}"), {{^isString}}std::to_string{{/isString}}(_{{paramName}}{{^required}}.value(){{/required}}));
         {{/pathParams}}
         {{#headerParams}}
-        req->addHeader("{{paramName}}", {{^isString}}std::to_string{{/isString}}(_{{paramName}}));
+        {{^required}}
+        if(_{{paramName}}.has_value())
+        {{/required}}
+        req->addHeader("{{paramName}}", {{^isString}}std::to_string{{/isString}}(_{{paramName}}{{^required}}.value(){{/required}}));
         {{/headerParams}}
         {{#cookieParams}}
-        req->addCookie("{{paramName}}", {{^isString}}std::to_string{{/isString}}(_{{paramName}}));
+        {{^required}}
+        if(_{{paramName}}.has_value())
+        {{/required}}
+        req->addCookie("{{paramName}}", {{^isString}}std::to_string{{/isString}}(_{{paramName}}{{^required}}.value(){{/required}}));
         {{/cookieParams}}
         {{#formParams}}
         {{^isFile}}
-        req->setParameter("{{paramName}}", {{^isString}}std::to_string{{/isString}}(_{{paramName}}));
+        {{^required}}
+        if(_{{paramName}}.has_value())
+        {{/required}}
+        req->setParameter("{{paramName}}", {{^isString}}std::to_string{{/isString}}(_{{paramName}}{{^required}}.value(){{/required}}));
         {{/isFile}}
         {{/formParams}}
 
