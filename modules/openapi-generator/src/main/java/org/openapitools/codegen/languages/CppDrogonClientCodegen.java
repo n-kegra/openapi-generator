@@ -53,8 +53,11 @@ public class CppDrogonClientCodegen extends DefaultCodegen implements CodegenCon
         typeMapping.put("array", "std::vector");
         typeMapping.put("map", "std::map");
         typeMapping.put("set", "std::set");
-        typeMapping.put("file", "drogon::UploadFile");
 
+        typeMapping.put("UUID", "std::string");
+        typeMapping.put("URI", "std::string");
+        typeMapping.put("file", "drogon::UploadFile");
+        typeMapping.put("binary", "std::basic_string_view<byte>");
         typeMapping.put("DateTime", "std::string");
 
         commonIncludes.add("int32_t");
