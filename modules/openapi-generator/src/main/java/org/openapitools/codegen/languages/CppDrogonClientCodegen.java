@@ -79,7 +79,8 @@ public class CppDrogonClientCodegen extends DefaultCodegen implements CodegenCon
         embeddedTemplateDir = templateDir = "cpp-drogon";
         apiPackage = "apis";
         modelPackage = "models";
-        // supportingFiles.add(new SupportingFile("helper.mustache", "", "helper.h"));
+        supportingFiles.add(new SupportingFile("helper-header.mustache", "", "Helper.h"));
+        supportingFiles.add(new SupportingFile("helper-source.mustache", "", "Helper.cpp"));
         supportingFiles.add(new SupportingFile("README.mustache", "", "README.md"));
     }
 

@@ -6,6 +6,7 @@
 #include <json/json.h>
 #include <string>
 #include <optional>
+#include "../helper.h"
 
 {{#imports}}{{{import}}}
 {{/imports}}
@@ -36,21 +37,36 @@ class {{classname}} {
         const {{^required}}std::optional<{{/required}}{{{dataType}}}{{^required}}>{{/required}}& _{{paramName}}{{^-last}}, {{/-last}}
         {{/allParams}}
     ){
-        {{#hasBodyParams}}
+        {{#hasBodyParam}}
         Json::Value json;
         {{#bodyParams}}
-        json["{{paramName}}"] = _{{paramName}};
+        {{^required}}if(_{{paramName}}.has_value()) {{/required}}{
+            json["{{paramName}}"] = {{#isContainer}}Helper::toJson{{/isContainer}}(_{{paramName}}{{^required}}.value(){{/required}});
+        }
         {{/bodyParams}}
         auto req = drogon::HttpRequest::newHttpJsonRequest(json);
-        {{/hasBodyParams}}
-        {{^hasBodyParams}}
+        {{/hasBodyParam}}
+        {{^hasBodyParam}}
+            {{#hasFormParam}}
+        std::vector<drogon::UploadFile> files;
+                {{#formParams}}
+                    {{#isFile}}
+                        {{^required}}
+        if(_{{paramName}}.has_value())
+                        {{/required}}
+        files.push_back(_{{paramName}}{{^required}}.value(){{/required}});
+                    {{/isFile}}
+                {{/formParams}}
+        auto req = drogon::HttpRequest::newFileUploadRequest(files);
+            {{/hasFormParam}}
+            {{^hasFormParam}}
         auto req = drogon::HttpRequest::newHttpRequest();
-        {{/hasBodyParams}}
+            {{/hasFormParam}}
+        {{/hasBodyParam}}
         req->setMethod(drogon::HttpMethod::{{#lambda.titlecase}}{{#lambda.lowercase}}{{httpMethod}}{{/lambda.lowercase}}{{/lambda.titlecase}});
 
         std::string endpoint_path = "{{path}}";
         std::vector<std::string> query_strs;
-        
         {{#authMethods}}
             {{#isApiKey}}
                 {{#isKeyInQuery}}
@@ -84,40 +100,70 @@ class {{classname}} {
         }
             {{/isBasicBasic}}
         {{/authMethods}}
-
-        {{#queryParams}}
-        {{^required}}
-        if(_{{paramName}}.has_value())
-        {{/required}}
-        query_strs.push_back("{{paramName}}=" + {{^isString}}std::to_string{{/isString}}(_{{paramName}}{{^required}}.value(){{/required}}));
-        {{/queryParams}}
-        {{#pathParams}}
-        {{^required}}
-        if(_{{paramName}}.has_value())
-        {{/required}}
-        endpoint_path = std::regex_replace(endpoint_path, std::regex("{" "{{paramName}}" "}"), {{^isString}}std::to_string{{/isString}}(_{{paramName}}{{^required}}.value(){{/required}}));
-        {{/pathParams}}
-        {{#headerParams}}
-        {{^required}}
-        if(_{{paramName}}.has_value())
-        {{/required}}
-        req->addHeader("{{paramName}}", {{^isString}}std::to_string{{/isString}}(_{{paramName}}{{^required}}.value(){{/required}}));
-        {{/headerParams}}
-        {{#cookieParams}}
-        {{^required}}
-        if(_{{paramName}}.has_value())
-        {{/required}}
-        req->addCookie("{{paramName}}", {{^isString}}std::to_string{{/isString}}(_{{paramName}}{{^required}}.value(){{/required}}));
-        {{/cookieParams}}
-        {{#formParams}}
-        {{^isFile}}
-        {{^required}}
-        if(_{{paramName}}.has_value())
-        {{/required}}
-        req->setParameter("{{paramName}}", {{^isString}}std::to_string{{/isString}}(_{{paramName}}{{^required}}.value(){{/required}}));
-        {{/isFile}}
-        {{/formParams}}
-
+        {{#allParams}}{{^isBodyParam}}{{^isFile}}
+        {{^required}}if(_{{paramName}}.has_value()) {{/required}}{
+            Json::Value jsonobj = {{#isContainer}}Helper::toJson{{/isContainer}}(_{{paramName}}{{^required}}.value(){{/required}});
+            {{#style}}
+            constexpr auto style = Helper::SerializeStyle::{{this}};
+            {{/style}}
+            {{^style}}
+                {{#isPathParam}}
+            constexpr auto style = Helper::SerializeStyle::simple;
+                {{/isPathParam}}
+                {{#isQueryParam}}
+            constexpr auto style = Helper::SerializeStyle::form;
+                {{/isQueryParam}}
+                {{#isHeaderParam}}
+            constexpr auto style = Helper::SerializeStyle::simple;
+                {{/isHeaderParam}}
+                {{#isCookieParam}}
+            constexpr auto style = Helper::SerializeStyle::form;
+                {{/isCookieParam}}
+                {{#isFormParam}}
+                    {{^isFile}}
+            constexpr auto style = Helper::SerializeStyle::form;
+                    {{/isFile}}
+                {{/isFormParam}}
+            {{/style}}
+            {{^isExplode}}
+            auto serialized = Helper::serialize(style, "{{paramName}}", jsonobj);
+                {{#isPathParam}}
+            endpoint_path = std::regex_replace(endpoint_path, std::regex("{" "{{paramName}}" "}"), serialized);
+                {{/isPathParam}}
+                {{#isQueryParam}}
+            query_strs.push_back("{{paramName}}=" + serialized);
+                {{/isQueryParam}}
+                {{#isHeaderParam}}
+            req->addHeader("{{paramName}}", serialized);
+                {{/isHeaderParam}}
+                {{#isCookieParam}}
+            req->addCookie("{{paramName}}", serialized);
+                {{/isCookieParam}}
+                {{#isFormParam}}
+            req->setParameter("{{paramName}}", serialized);
+                {{/isFormParam}}
+            {{/isExplode}}
+            {{#isExplode}}
+            auto serialized_list = Helper::serialize_explode(style, "{{paramName}}", jsonobj);
+                {{#isPathParam}}
+            endpoint_path = std::regex_replace(endpoint_path, std::regex("{" "{{paramName}}" "}"), 
+                Helper::serialize_collect(style, serialized_list));
+                {{/isPathParam}}
+                {{#isQueryParam}}
+            query_strs.assign(serialized_list.begin(), serialized_list.end());
+                {{/isQueryParam}}
+                {{#isHeaderParam}}
+            req->addHeader("{{paramName}}", Helper::serialize_collect(style, serialized_list));
+                {{/isHeaderParam}}
+                {{#isCookieParam}}
+            req->addCookie("{{paramName}}", Helper::serialize_collect(style, serialized_list));
+                {{/isCookieParam}}
+                {{#isFormParam}}
+            req->setParameter("{{paramName}}", Helper::serialize_collect(style, serialized_list));
+                {{/isFormParam}}
+            {{/isExplode}}
+        }
+        {{/isFile}}{{/isBodyParam}}{{/allParams}}
         std::string query_str_full;
         for(const auto& query_str : query_strs) {
             query_str_full += (query_str_full.empty() ? "?" : "&") + query_str;

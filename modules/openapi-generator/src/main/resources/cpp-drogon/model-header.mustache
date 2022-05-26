@@ -26,33 +26,21 @@ struct {{classname}} {
     {{{dataType}}} {{name}};
     {{/vars}}
 
+    operator Json::Value() const {
+        return this->toJson();
+    }
+    {{classname}}(const Json::Value& __value) {
+        this->fromJson(__value);
+    }
+
     Json::Value toJson() const {
         Json::Value _json;
     {{#vars}}
-        {{#isContainer}}
-            {{#items}}
-        for(const auto& _item : {{name}}){
-                {{#isModel}}
-            _json["{{name}}"].append({{name}}.toJson());
-                {{/isModel}}
-                {{^isModel}}
-            _json["{{name}}"].append({{name}});
-                {{/isModel}}
-        }
-            {{/items}}
-        {{/isContainer}}
-        {{^isContainer}}
-            {{#isModel}}
-        _json["{{name}}"] = {{name}}.toJson();
-            {{/isModel}}
-            {{^isModel}}
-        _json["{{name}}"] = {{name}};
-            {{/isModel}}
-        {{/isContainer}}
+        _json["{{name}}"] = {{#isContainer}}Helper::toJson{{/isContainer}}({{name}}{{#isModel}}.toJson(){{/isModel}});
     {{/vars}}
         return _json;
     }
-    auto& fromJson(const Json::Value& _json) {
+    {{classname}}& fromJson(const Json::Value& _json) {
         Json::Value _json;
     {{#vars}}
         {{name}} = _json["{{name}}"].as<{{{dataType}}}>();
