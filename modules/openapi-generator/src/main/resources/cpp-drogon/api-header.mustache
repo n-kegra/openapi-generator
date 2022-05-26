@@ -66,7 +66,7 @@ class {{classname}} {
         req->setMethod(drogon::HttpMethod::{{#lambda.titlecase}}{{#lambda.lowercase}}{{httpMethod}}{{/lambda.lowercase}}{{/lambda.titlecase}});
 
         std::string endpoint_path = "{{path}}";
-        std::vector<std::string> query_strs;
+        {{#hasQueryParams}}std::vector<std::string> query_strs;{{/hasQueryParams}}
         {{#authMethods}}
             {{#isApiKey}}
                 {{#isKeyInQuery}}
@@ -131,7 +131,7 @@ class {{classname}} {
             endpoint_path = std::regex_replace(endpoint_path, std::regex("{" "{{paramName}}" "}"), serialized);
                 {{/isPathParam}}
                 {{#isQueryParam}}
-            query_strs.push_back("{{paramName}}=" + serialized);
+            query_strs.push_back(serialized);
                 {{/isQueryParam}}
                 {{#isHeaderParam}}
             req->addHeader("{{paramName}}", serialized);
@@ -164,12 +164,7 @@ class {{classname}} {
             {{/isExplode}}
         }
         {{/isFile}}{{/isBodyParam}}{{/allParams}}
-        std::string query_str_full;
-        for(const auto& query_str : query_strs) {
-            query_str_full += (query_str_full.empty() ? "?" : "&") + query_str;
-        }
-
-        req->setPath(baseurl_path + endpoint_path + query_str_full);
+        req->setPath(baseurl_path + endpoint_path{{#hasQueryParams}} + Helper::serialize_collect(Helper::SerializeStyle::form, query_strs){{/hasQueryParams}});
 
         auto [result, response] = this->client->sendRequest(req);
 
