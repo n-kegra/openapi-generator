@@ -76,7 +76,7 @@ public class CppDrogonClientCodegen extends DefaultCodegen implements CodegenCon
 
         outputFolder = "generated-code" + File.separator + "cpp-drogon";
         modelTemplateFiles.put("model-header.mustache", ".h");
-        // modelTemplateFiles.put("model-source.mustache", ".cpp");
+        modelTemplateFiles.put("model-source.mustache", ".cpp");
         apiTemplateFiles.put("api-header.mustache", ".h");
         // apiTemplateFiles.put("api-source.mustache", ".cpp");
         embeddedTemplateDir = templateDir = "cpp-drogon";
