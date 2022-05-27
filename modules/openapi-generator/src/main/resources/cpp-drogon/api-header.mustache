@@ -28,9 +28,9 @@ public:
     {{classname}}(std::string _baseurl_host, std::string _baseurl_path) :
         baseurl_path(_baseurl_path), client(drogon::HttpClient::newHttpClient(_baseurl_host)) {}
     
-    {{classname}}& setBearerToken(std::string _token) { this->bearer_token = _token; }
-    {{classname}}& setBasicAuth(std::string _username, std::string _password) { this->basic_username = _username; this->basic_password = _password; }
-    {{classname}}& setApikey(std::string _apikey) { this->apikey = _apikey; }
+    {{classname}}& setBearerToken(std::string _token) { this->bearer_token = _token; return *this; }
+    {{classname}}& setBasicAuth(std::string _username, std::string _password) { this->basic_username = _username; this->basic_password = _password; return *this; }
+    {{classname}}& setApikey(std::string _apikey) { this->apikey = _apikey; return *this; }
 
 {{#operations}}
     {{#operation}}
