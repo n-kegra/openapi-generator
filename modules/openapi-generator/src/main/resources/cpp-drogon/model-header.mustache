@@ -98,7 +98,7 @@ struct {{classname}} {
     {{classname}}& fromJson(const Json::Value& _json) {
     {{#vars}}
         {{#isContainer}}
-        for (auto _it = _json.begin(); _it != _json.end(); _it++) {
+        for (auto _it = _json["{{name}}"].begin(); _it != _json["{{name}}"].end(); _it++) {
             {{name}}.emplace{{#isArray}}_back{{/isArray}}({{#isMap}}_it.name(), {{/isMap}}{{#items}}(*_it){{^isModel}}.as<{{{dataType}}}>(){{/isModel}}{{/items}});    
         }
         {{/isContainer}}
