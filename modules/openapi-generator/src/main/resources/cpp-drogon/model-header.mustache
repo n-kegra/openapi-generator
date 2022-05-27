@@ -121,5 +121,10 @@ struct {{classname}} {
 {{#cppNamespace}}
 }
 {{/cppNamespace}}
+{{#models}}
+{{#model}}
+template <> {{#cppNamespace}}{{.}}::{{/cppNamespace}}{{classname}} Json::Value::as<{{#cppNamespace}}{{.}}::{{/cppNamespace}}{{classname}}>() const { return {{#cppNamespace}}{{.}}::{{/cppNamespace}}{{classname}}(*this); }
+{{/model}}
+{{/models}}
 
 #endif
