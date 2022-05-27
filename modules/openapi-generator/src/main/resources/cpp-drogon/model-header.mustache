@@ -22,6 +22,59 @@ namespace {{this}} {
 {{#description}}
 // {{.}}
 {{/description}}
+{{#isEnum}}
+struct {{classname}} {
+    enum class Value {
+        {{#allowableValues}}
+            {{#values}}
+        e{{.}},
+            {{/values}}
+        {{/allowableValues}}
+        Unknown,
+    } value;
+    {{classname}}() { value = Value::Unknown; };
+    operator Json::Value() const {
+        return this->toJson();
+    }
+    {{classname}}(const Json::Value& __value) {
+        this->fromJson(__value);
+    }
+    {{classname}}(const Value __value) : value(__value) {}
+
+    Json::Value toJson() const {
+        switch(this->value) {
+        {{#allowableValues}}
+            {{#values}}
+        case Value::e{{.}}:
+            return Json::Value({{#isString}}"{{/isString}}{{.}}{{#isString}}"{{/isString}});
+            {{/values}}
+        {{/allowableValues}}
+        case Value::Unknown:
+            return Json::Value(Json::nullValue);
+        }
+    }
+    {{classname}}& fromJson(const Json::Value& _json) {
+        {{#isString}}
+        std::string s = _json.asString();
+        {{/isString}}
+        {{^isString}}
+        auto s = _json.asLargestInt();
+        {{/isString}}
+    {{#allowableValues}}
+        {{#values}}
+        if (s == {{#isString}}"{{/isString}}{{.}}{{#isString}}"{{/isString}}) {
+            this->value = Value::e{{.}};
+        } else
+        {{/values}}
+    {{/allowableValues}}
+        {
+            this->value = Value::Unknown;
+        }
+        return (*this);
+    }
+};
+{{/isEnum}}
+{{^isEnum}}
 struct {{classname}} {
     {{#vars}}
     {{{dataType}}} {{name}};
@@ -61,6 +114,7 @@ struct {{classname}} {
         return *this;
     }
 };
+{{/isEnum}}
 {{/model}}
 {{/models}}
 
