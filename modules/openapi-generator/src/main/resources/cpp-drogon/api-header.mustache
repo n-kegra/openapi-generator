@@ -137,7 +137,7 @@ public:
             {{^isExplode}}
             auto serialized = Helper::serialize(style, "{{paramName}}", jsonobj);
                 {{#isPathParam}}
-            endpoint_path = std::regex_replace(endpoint_path, std::regex("{" "{{paramName}}" "}"), serialized);
+            endpoint_path = std::regex_replace(endpoint_path, std::regex("\\{" "{{paramName}}" "\\}"), serialized);
                 {{/isPathParam}}
                 {{#isQueryParam}}
             query_strs.push_back(serialized);
