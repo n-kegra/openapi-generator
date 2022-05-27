@@ -181,7 +181,10 @@ public:
         auto response_json = response->getJsonObject();
         std::optional<{{{returnType}}}> response_object;
 
-        if(response_json) {
+        if (result == drogon::ReqResult::Ok &&
+            200 <= response->getStatusCode() &&
+            300 > response->getStatusCode() &&
+            response_json) {
             {{#returnContainer}}
             std::vector<{{returnBaseType}}> tmp;
             for (const auto& item : *response_json) {
