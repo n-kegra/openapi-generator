@@ -50,7 +50,7 @@ public:
         Json::Value json;
         {{#bodyParams}}
         {{^required}}if(_{{paramName}}.has_value()) {{/required}}{
-            json["{{paramName}}"] = {{#isContainer}}Helper::toJson{{/isContainer}}(_{{paramName}}{{^required}}.value(){{/required}});
+            json = {{#isContainer}}Helper::toJson{{/isContainer}}(_{{paramName}}{{^required}}.value(){{/required}});
         }
         {{/bodyParams}}
         auto req = drogon::HttpRequest::newHttpJsonRequest(json);
