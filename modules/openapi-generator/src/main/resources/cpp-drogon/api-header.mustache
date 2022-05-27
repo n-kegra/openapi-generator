@@ -182,12 +182,16 @@ public:
         std::optional<{{{returnType}}}> response_object;
 
         if(response_json) {
-            {{#returnTypeIsPrimitive}}
-            response_object.emplace(response_json.as<{{{returnType}}}>());
-            {{/returnTypeIsPrimitive}}
-            {{^returnTypeIsPrimitive}}
+            {{#returnContainer}}
+            std::vector<{{returnBaseType}}> tmp;
+            for (const auto& item : *response_json) {
+                tmp.emplace_back(item.as<{{{returnBaseType}}}>());    
+            }
+            response_object.emplace(std::move(tmp));
+            {{/returnContainer}}
+            {{^returnContainer}}
             response_object.emplace(*response_json);
-            {{/returnTypeIsPrimitive}}
+            {{/returnContainer}}
         }
         {{/returnType}}
 
