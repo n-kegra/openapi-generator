@@ -47,7 +47,7 @@ Json::Value {{classname}}::toJson() const {
 Json::Value {{classname}}::toJson() const {
     Json::Value _json;
     {{#vars}}
-    _json["{{name}}"] = {{#isContainer}}Helper::toJson{{/isContainer}}({{name}}{{#isModel}}.toJson(){{/isModel}});
+    _json["{{name}}"] = {{#isContainer}}__Helper::toJson{{/isContainer}}({{name}}{{#isModel}}.toJson(){{/isModel}});
     {{/vars}}
     return _json;
 }

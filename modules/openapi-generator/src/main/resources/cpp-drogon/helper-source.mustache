@@ -1,10 +1,10 @@
-#include "Helper.h"
+#include "helper.h"
 
 {{#cppNamespace}}
 namespace {{this}} {
 {{/cppNamespace}}
 
-namespace Helper {
+namespace __Helper {
     std::string serialize(SerializeStyle style, const std::string name, const Json::Value& value) {
         std::string str;
         char delimiter;

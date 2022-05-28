@@ -50,7 +50,7 @@ public:
         Json::Value json;
         {{#bodyParams}}
         {{^required}}if(_{{paramName}}.has_value()) {{/required}}{
-            json = {{#isContainer}}Helper::toJson{{/isContainer}}(_{{paramName}}{{^required}}.value(){{/required}});
+            json = {{#isContainer}}__Helper::toJson{{/isContainer}}(_{{paramName}}{{^required}}.value(){{/required}});
         }
         {{/bodyParams}}
         auto req = drogon::HttpRequest::newHttpJsonRequest(json);
@@ -111,31 +111,31 @@ public:
         {{/authMethods}}
         {{#allParams}}{{^isBodyParam}}{{^isFile}}
         {{^required}}if(_{{paramName}}.has_value()) {{/required}}{
-            Json::Value jsonobj = {{#isContainer}}Helper::toJson{{/isContainer}}(_{{paramName}}{{^required}}.value(){{/required}});
+            Json::Value jsonobj = {{#isContainer}}__Helper::toJson{{/isContainer}}(_{{paramName}}{{^required}}.value(){{/required}});
             {{#style}}
-            constexpr auto style = Helper::SerializeStyle::{{this}};
+            constexpr auto style = __Helper::SerializeStyle::{{this}};
             {{/style}}
             {{^style}}
                 {{#isPathParam}}
-            constexpr auto style = Helper::SerializeStyle::simple;
+            constexpr auto style = __Helper::SerializeStyle::simple;
                 {{/isPathParam}}
                 {{#isQueryParam}}
-            constexpr auto style = Helper::SerializeStyle::form;
+            constexpr auto style = __Helper::SerializeStyle::form;
                 {{/isQueryParam}}
                 {{#isHeaderParam}}
-            constexpr auto style = Helper::SerializeStyle::simple;
+            constexpr auto style = __Helper::SerializeStyle::simple;
                 {{/isHeaderParam}}
                 {{#isCookieParam}}
-            constexpr auto style = Helper::SerializeStyle::form;
+            constexpr auto style = __Helper::SerializeStyle::form;
                 {{/isCookieParam}}
                 {{#isFormParam}}
                     {{^isFile}}
-            constexpr auto style = Helper::SerializeStyle::form;
+            constexpr auto style = __Helper::SerializeStyle::form;
                     {{/isFile}}
                 {{/isFormParam}}
             {{/style}}
             {{^isExplode}}
-            auto serialized = Helper::serialize(style, "{{paramName}}", jsonobj);
+            auto serialized = __Helper::serialize(style, "{{paramName}}", jsonobj);
                 {{#isPathParam}}
             endpoint_path = std::regex_replace(endpoint_path, std::regex("\\{" "{{paramName}}" "\\}"), serialized);
                 {{/isPathParam}}
@@ -153,27 +153,27 @@ public:
                 {{/isFormParam}}
             {{/isExplode}}
             {{#isExplode}}
-            auto serialized_list = Helper::serialize_explode(style, "{{paramName}}", jsonobj);
+            auto serialized_list = __Helper::serialize_explode(style, "{{paramName}}", jsonobj);
                 {{#isPathParam}}
             endpoint_path = std::regex_replace(endpoint_path, std::regex("{" "{{paramName}}" "}"), 
-                Helper::serialize_collect(style, serialized_list));
+                __Helper::serialize_collect(style, serialized_list));
                 {{/isPathParam}}
                 {{#isQueryParam}}
             query_strs.assign(serialized_list.begin(), serialized_list.end());
                 {{/isQueryParam}}
                 {{#isHeaderParam}}
-            req->addHeader("{{paramName}}", Helper::serialize_collect(style, serialized_list));
+            req->addHeader("{{paramName}}", __Helper::serialize_collect(style, serialized_list));
                 {{/isHeaderParam}}
                 {{#isCookieParam}}
-            req->addCookie("{{paramName}}", Helper::serialize_collect(style, serialized_list));
+            req->addCookie("{{paramName}}", __Helper::serialize_collect(style, serialized_list));
                 {{/isCookieParam}}
                 {{#isFormParam}}
-            req->setParameter("{{paramName}}", Helper::serialize_collect(style, serialized_list));
+            req->setParameter("{{paramName}}", __Helper::serialize_collect(style, serialized_list));
                 {{/isFormParam}}
             {{/isExplode}}
         }
         {{/isFile}}{{/isBodyParam}}{{/allParams}}
-        req->setPath(baseurl_path + endpoint_path{{#hasQueryParams}} + Helper::serialize_collect(Helper::SerializeStyle::form, query_strs){{/hasQueryParams}});
+        req->setPath(baseurl_path + endpoint_path{{#hasQueryParams}} + __Helper::serialize_collect(__Helper::SerializeStyle::form, query_strs){{/hasQueryParams}});
 
         auto [result, response] = this->client->sendRequest(req);
 
