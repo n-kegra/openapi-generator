@@ -47,6 +47,97 @@ public class CppDrogonClientCodegen extends DefaultCodegen implements CodegenCon
     public CppDrogonClientCodegen() {
         super();
 
+        reservedWords.addAll(
+            Arrays.asList(
+                    "alignas",
+                    "alignof",
+                    "and",
+                    "and_eq",
+                    "asm",
+                    "auto",
+                    "bitand",
+                    "bitor",
+                    "bool",
+                    "break",
+                    "case",
+                    "catch",
+                    "char",
+                    "char16_t",
+                    "char32_t",
+                    "class",
+                    "compl",
+                    "concept",
+                    "const",
+                    "constexpr",
+                    "const_cast",
+                    "continue",
+                    "decltype",
+                    "default",
+                    "delete",
+                    "do",
+                    "double",
+                    "dynamic_cast",
+                    "else",
+                    "enum",
+                    "explicit",
+                    "export",
+                    "extern",
+                    "false",
+                    "float",
+                    "for",
+                    "friend",
+                    "goto",
+                    "if",
+                    "inline",
+                    "int",
+                    "linux",
+                    "long",
+                    "mutable",
+                    "namespace",
+                    "new",
+                    "noexcept",
+                    "not",
+                    "not_eq",
+                    "nullptr",
+                    "operator",
+                    "or",
+                    "or_eq",
+                    "private",
+                    "protected",
+                    "public",
+                    "register",
+                    "reinterpret_cast",
+                    "requires",
+                    "return",
+                    "short",
+                    "signed",
+                    "sizeof",
+                    "static",
+                    "static_assert",
+                    "static_cast",
+                    "struct",
+                    "switch",
+                    "template",
+                    "this",
+                    "thread_local",
+                    "throw",
+                    "true",
+                    "try",
+                    "typedef",
+                    "typeid",
+                    "typename",
+                    "union",
+                    "unsigned",
+                    "using",
+                    "virtual",
+                    "void",
+                    "volatile",
+                    "wchar_t",
+                    "while",
+                    "xor",
+                    "xor_eq")
+        );
+
         super.typeMapping = new HashMap<>();
         typeMapping.put("string", "std::string");
         typeMapping.put("integer", "int32_t");
@@ -166,6 +257,11 @@ public class CppDrogonClientCodegen extends DefaultCodegen implements CodegenCon
     @Override
     @SuppressWarnings("static-method")
     public String escapeReservedWord(String name) {
-        return "_" + name;
+        return name.substring(0, 1).toUpperCase() + name.substring(1);
+    }
+
+    @Override
+    protected boolean isReservedWord(String word) {
+        return word != null && reservedWords.contains(word);
     }
 }
