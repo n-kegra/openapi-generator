@@ -33,6 +33,14 @@ namespace __Helper {
         return jsonobj;
     }
     template<class T>
+    Json::Value toJson(const std::set<T>& obj){
+        Json::Value jsonobj;
+        for(const auto& item : obj){
+            jsonobj.append(item);
+        }
+        return jsonobj;
+    }
+    template<class T>
     Json::Value toJson(const std::map<std::string, T>& obj){
         Json::Value jsonobj;
         for(const auto& [key, item] : obj){

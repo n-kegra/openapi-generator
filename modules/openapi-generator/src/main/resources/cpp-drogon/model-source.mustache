@@ -55,7 +55,8 @@ Json::Value {{classname}}::toJson() const {
     {{#vars}}
         {{#isContainer}}
     for (auto _it = _json["{{name}}"].begin(); _it != _json["{{name}}"].end(); _it++) {
-        {{name}}.emplace{{#isArray}}_back{{/isArray}}({{#isMap}}_it.name(), {{/isMap}}{{#items}}(*_it){{^isModel}}.as<{{{dataType}}}>(){{/isModel}}{{/items}});    
+        {{name}}.{{#isMap}}emplace{{/isMap}}{{#isArray}}{{#uniqueItems}}emplace{{/uniqueItems}}{{^uniqueItems}}emplace_back{{/uniqueItems}}{{/isArray}}
+            ({{#isMap}}_it.name(), {{/isMap}}{{#items}}(*_it){{^isModel}}.as<{{{dataType}}}>(){{/isModel}}{{/items}});    
     }
         {{/isContainer}}
         {{^isContainer}}

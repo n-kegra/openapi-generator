@@ -128,6 +128,10 @@ public class CppDrogonClientCodegen extends DefaultCodegen implements CodegenCon
             ArraySchema ap = (ArraySchema) p;
             Schema inner = ap.getItems();
             return getSchemaType(p) + "<" + getTypeDeclaration(inner) + ">";
+        } else if (ModelUtils.isSet(p)) {
+            ArraySchema ap = (ArraySchema) p;
+            Schema inner = ap.getItems();
+            return getSchemaType(p) + "<" + getTypeDeclaration(inner) + ">";
         } else if (ModelUtils.isMapSchema(p)) {
             Schema inner = getAdditionalProperties(p);
             return getSchemaType(p) + "<" + typeMapping.get("string") + ", " + getTypeDeclaration(inner) + ">";
@@ -157,5 +161,11 @@ public class CppDrogonClientCodegen extends DefaultCodegen implements CodegenCon
         supportingFiles.add(new SupportingFile("general-header.mustache", includeDir, "Client.h"));
         supportingFiles.add(new SupportingFile("cmake.mustache", "", "CMakeLists.txt"));
         supportingFiles.add(new SupportingFile("README.mustache", "", "README.md"));
+    }
+
+    @Override
+    @SuppressWarnings("static-method")
+    public String escapeReservedWord(String name) {
+        return "_" + name;
     }
 }
