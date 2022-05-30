@@ -1,0 +1,15 @@
+// Header {{appName}}
+
+#ifndef {{prefix}}__CLIENT_H
+#define {{prefix}}__CLIENT_H
+
+{{#apiInfo}}
+{{#apis}}
+#include <{{includeDir}}/apis/{{classFilename}}.h>
+{{/apis}}
+{{/apiInfo}}
+{{#models}}
+{{#model}}#include <{{includeDir}}/models/{{classFilename}}.h>{{/model}}
+{{/models}}
+
+#endif

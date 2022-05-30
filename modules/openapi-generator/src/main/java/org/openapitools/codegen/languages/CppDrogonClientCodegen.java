@@ -26,6 +26,9 @@ public class CppDrogonClientCodegen extends DefaultCodegen implements CodegenCon
     protected static final String CPP_NAMESPACE_DESC = "C++ namespace (convention: name::space::for::api).";
     protected String cppNamespace = "OpenAPI";
 
+    protected String includeDir = "OpenAPI";
+    protected String prefix = "OAPI";
+
     protected Set<String> commonIncludes = new HashSet<>();
     protected Map<String, String> importMapping = new HashMap<>();
 
@@ -73,6 +76,10 @@ public class CppDrogonClientCodegen extends DefaultCodegen implements CodegenCon
 
         addOption(CPP_NAMESPACE, CPP_NAMESPACE_DESC, this.cppNamespace);
         additionalProperties.put("cppNamespace", cppNamespace);
+        addOption("includeDir", "include dir name", this.includeDir);
+        additionalProperties.put("includeDir", includeDir);
+        addOption("prefix", "header symbol prefix", this.prefix);
+        additionalProperties.put("prefix", prefix);
 
         outputFolder = "generated-code" + File.separator + "cpp-drogon";
         modelTemplateFiles.put("model-header.mustache", ".h");
@@ -80,11 +87,6 @@ public class CppDrogonClientCodegen extends DefaultCodegen implements CodegenCon
         apiTemplateFiles.put("api-header.mustache", ".h");
         // apiTemplateFiles.put("api-source.mustache", ".cpp");
         embeddedTemplateDir = templateDir = "cpp-drogon";
-        apiPackage = "apis";
-        modelPackage = "models";
-        supportingFiles.add(new SupportingFile("helper-header.mustache", "", "Helper.h"));
-        supportingFiles.add(new SupportingFile("helper-source.mustache", "", "Helper.cpp"));
-        supportingFiles.add(new SupportingFile("README.mustache", "", "README.md"));
     }
 
     @Override
@@ -93,7 +95,7 @@ public class CppDrogonClientCodegen extends DefaultCodegen implements CodegenCon
             return null;
         if(importMapping.containsKey(name))
             return "#include <" + importMapping.get(name) + ">";
-        return "#include \"../models/" + name + ".h\"";
+        return "#include <" + this.includeDir + "/models/" + name + ".h>";
     }
 
     /**
@@ -132,5 +134,28 @@ public class CppDrogonClientCodegen extends DefaultCodegen implements CodegenCon
         } else {
             return getSchemaType(p);
         }
+    }
+
+    @Override
+    public void processOpts() {
+        super.processOpts();
+
+        if (additionalProperties.containsKey("cppNamespace")) {
+            cppNamespace = (String) additionalProperties.get("cppNamespace");
+        }
+        if (additionalProperties.containsKey("includeDir")) {
+            includeDir = (String) additionalProperties.get("includeDir");
+        }
+        if (additionalProperties.containsKey("prefix")) {
+            prefix = (String) additionalProperties.get("prefix");
+        }
+        
+        apiPackage = includeDir + "/apis";
+        modelPackage = includeDir + "/models";
+        supportingFiles.add(new SupportingFile("helper-header.mustache", includeDir, "Helper.h"));
+        supportingFiles.add(new SupportingFile("helper-source.mustache", includeDir, "Helper.cpp"));
+        supportingFiles.add(new SupportingFile("general-header.mustache", includeDir, "Client.h"));
+        supportingFiles.add(new SupportingFile("cmake.mustache", "", "CMakeLists.txt"));
+        supportingFiles.add(new SupportingFile("README.mustache", "", "README.md"));
     }
 }
