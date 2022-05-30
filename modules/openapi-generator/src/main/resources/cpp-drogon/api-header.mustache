@@ -178,6 +178,7 @@ public:
         auto [result, response] = this->client->sendRequest(req);
 
         {{#returnType}}
+        {{^isResponseFile}}
         auto response_json = response->getJsonObject();
         std::optional<{{{returnType}}}> response_object;
 
@@ -196,9 +197,10 @@ public:
             response_object.emplace(*response_json);
             {{/returnContainer}}
         }
+        {{/isResponseFile}}
         {{/returnType}}
 
-        return std::forward_as_tuple(result, response{{#returnType}}, response_object{{/returnType}});
+        return std::forward_as_tuple(result, response{{#returnType}}{{^isResponseFile}}, response_object{{/isResponseFile}}{{/returnType}});
     }
 
    {{/operation}}
