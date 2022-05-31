@@ -27,7 +27,7 @@ struct {{classname}} {
     enum class Value {
         {{#allowableValues}}
             {{#values}}
-        e{{.}},
+        e{{#lambda.titlecase}}{{.}}{{/lambda.titlecase}},
             {{/values}}
         {{/allowableValues}}
         Unknown,
