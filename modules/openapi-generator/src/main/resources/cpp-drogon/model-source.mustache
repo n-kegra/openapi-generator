@@ -33,7 +33,7 @@ Json::Value {{classname}}::toJson() const {
     {{#allowableValues}}
         {{#values}}
     if (s == {{#isString}}"{{/isString}}{{.}}{{#isString}}"{{/isString}}) {
-        this->value = Value::e{{.}};
+        this->value = Value::e{{#lambda.titlecase}}{{.}}{{/lambda.titlecase}};
     } else
         {{/values}}
     {{/allowableValues}}
