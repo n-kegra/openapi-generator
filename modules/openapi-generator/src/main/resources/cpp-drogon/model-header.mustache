@@ -41,8 +41,37 @@ struct {{classname}} {
     }
     {{classname}}(const Value __value) : value(__value) {}
 
-    Json::Value toJson() const;
-    {{classname}}& fromJson(const Json::Value& _json);
+    Json::Value toJson() const {
+        switch(this->value) {
+        {{#allowableValues}}
+            {{#values}}
+        case Value::e{{#lambda.titlecase}}{{.}}{{/lambda.titlecase}}:
+            return Json::Value({{#isString}}"{{/isString}}{{.}}{{#isString}}"{{/isString}});
+            {{/values}}
+        {{/allowableValues}}
+        default:
+            return Json::Value(Json::nullValue);
+        }
+    }
+    {{classname}}& fromJson(const Json::Value& _json) {
+    {{#isString}}
+        std::string s = _json.asString();
+    {{/isString}}
+    {{^isString}}
+        auto s = _json.asLargestInt();
+    {{/isString}}
+    {{#allowableValues}}
+        {{#values}}
+        if (s == {{#isString}}"{{/isString}}{{.}}{{#isString}}"{{/isString}}) {
+            this->value = Value::e{{#lambda.titlecase}}{{.}}{{/lambda.titlecase}};
+        } else
+        {{/values}}
+    {{/allowableValues}}
+        {
+            this->value = Value::Unknown;
+        }
+        return (*this);
+    }
 };
 {{/isEnum}}
 {{^isEnum}}
@@ -59,8 +88,31 @@ struct {{classname}} {
         this->fromJson(__value);
     }
 
-    Json::Value toJson() const;
-    {{classname}}& fromJson(const Json::Value& _json);
+    Json::Value toJson() const {
+        Json::Value _json;
+    {{#vars}}
+        _json["{{baseName}}"] = {{#isContainer}}__Helper::toJson{{/isContainer}}({{name}}{{#isModel}}.toJson(){{/isModel}});
+    {{/vars}}
+        return _json;
+    }
+    {{classname}}& fromJson(const Json::Value& _json) {
+    {{#vars}}
+        {{#isContainer}}
+        for (auto _it = _json["{{baseName}}"].begin(); _it != _json["{{baseName}}"].end(); _it++) {
+            {{name}}.{{#isMap}}emplace{{/isMap}}{{#isArray}}{{#uniqueItems}}emplace{{/uniqueItems}}{{^uniqueItems}}emplace_back{{/uniqueItems}}{{/isArray}}({{#isMap}}_it.name(), {{/isMap}}{{#items}}(*_it){{^isModel}}.as<{{{dataType}}}>(){{/isModel}}{{/items}});    
+        }
+        {{/isContainer}}
+        {{^isContainer}}
+            {{#isModel}}
+        {{name}}.fromJson(_json["{{baseName}}"]);
+            {{/isModel}}
+            {{^isModel}}
+        {{name}} = _json["{{baseName}}"].as<{{{dataType}}}>();
+            {{/isModel}}
+        {{/isContainer}}
+    {{/vars}}
+        return *this;
+    }
 };
 {{/isEnum}}
 {{/model}}
@@ -71,7 +123,9 @@ struct {{classname}} {
 {{/cppNamespace}}
 {{#models}}
 {{#model}}
-template <> {{#cppNamespace}}{{.}}::{{/cppNamespace}}{{classname}} Json::Value::as<{{#cppNamespace}}{{.}}::{{/cppNamespace}}{{classname}}>() const;
+template <> inline {{#cppNamespace}}{{.}}::{{/cppNamespace}}{{classname}} Json::Value::as<{{#cppNamespace}}{{.}}::{{/cppNamespace}}{{classname}}>() const {
+    return {{#cppNamespace}}{{.}}::{{/cppNamespace}}{{classname}}(*this);
+};
 {{/model}}
 {{/models}}
 
