@@ -15,11 +15,11 @@ Json::Value {{classname}}::toJson() const {
     switch(this->value) {
     {{#allowableValues}}
         {{#values}}
-    case Value::e{{.}}:
+    case Value::e{{#lambda.titlecase}}{{.}}{{/lambda.titlecase}}:
         return Json::Value({{#isString}}"{{/isString}}{{.}}{{#isString}}"{{/isString}});
         {{/values}}
     {{/allowableValues}}
-    case Value::Unknown:
+    default:
         return Json::Value(Json::nullValue);
     }
 }
