@@ -76,7 +76,7 @@ namespace __Helper {
         } else {
             strs.push_back(value.asString());
         }
-        return std::move(strs);
+        return strs;
     }
     std::string serialize_collect(SerializeStyle style, const std::vector<std::string>& strs) {
         std::string str_collect;
