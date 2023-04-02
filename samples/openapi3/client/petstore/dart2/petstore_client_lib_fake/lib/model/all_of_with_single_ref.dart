@@ -25,6 +25,12 @@ class AllOfWithSingleRef {
   ///
   String? username;
 
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
   SingleRefType? singleRefType;
 
   @override
@@ -42,14 +48,18 @@ class AllOfWithSingleRef {
   String toString() => 'AllOfWithSingleRef[username=$username, singleRefType=$singleRefType]';
 
   Map<String, dynamic> toJson() {
-    final _json = <String, dynamic>{};
-    if (username != null) {
-      _json[r'username'] = username;
+    final json = <String, dynamic>{};
+    if (this.username != null) {
+      json[r'username'] = this.username;
+    } else {
+      json[r'username'] = null;
     }
-    if (singleRefType != null) {
-      _json[r'SingleRefType'] = singleRefType;
+    if (this.singleRefType != null) {
+      json[r'SingleRefType'] = this.singleRefType;
+    } else {
+      json[r'SingleRefType'] = null;
     }
-    return _json;
+    return json;
   }
 
   /// Returns a new [AllOfWithSingleRef] instance and imports its values from

@@ -44,7 +44,7 @@ namespace Org.OpenAPITools.Model
         /// Initializes a new instance of the <see cref="ParentPet" /> class.
         /// </summary>
         /// <param name="petType">petType (required) (default to &quot;ParentPet&quot;).</param>
-        public ParentPet(string petType = "ParentPet") : base(petType)
+        public ParentPet(string petType = @"ParentPet") : base(petType)
         {
         }
 
@@ -120,7 +120,7 @@ namespace Org.OpenAPITools.Model
         /// <returns>Validation Result</returns>
         protected IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult> BaseValidate(ValidationContext validationContext)
         {
-            foreach (var x in BaseValidate(validationContext))
+            foreach (var x in base.BaseValidate(validationContext))
             {
                 yield return x;
             }

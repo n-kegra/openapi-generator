@@ -29,7 +29,7 @@ import java.time.OffsetTime
 import java.util.Locale
 import com.squareup.moshi.adapter
 
-internal open class ApiClient(val baseUrl: String) {
+internal open class ApiClient(val baseUrl: String, val client: OkHttpClient = defaultClient) {
     internal companion object {
         protected const val ContentType = "Content-Type"
         protected const val Accept = "Accept"
@@ -47,7 +47,7 @@ internal open class ApiClient(val baseUrl: String) {
         const val baseUrlKey = "org.openapitools.client.baseUrl"
 
         @JvmStatic
-        val client: OkHttpClient by lazy {
+        val defaultClient: OkHttpClient by lazy {
             builder.build()
         }
 
@@ -68,6 +68,7 @@ internal open class ApiClient(val baseUrl: String) {
 
     protected inline fun <reified T> requestBody(content: T, mediaType: String?): RequestBody =
         when {
+            content is File -> content.asRequestBody((mediaType ?: guessContentTypeFromFile(content)).toMediaTypeOrNull())
             mediaType == FormDataMediaType ->
                 MultipartBody.Builder()
                     .setType(MultipartBody.FORM)
@@ -75,22 +76,24 @@ internal open class ApiClient(val baseUrl: String) {
                         // content's type *must* be Map<String, PartConfig<*>>
                         @Suppress("UNCHECKED_CAST")
                         (content as Map<String, PartConfig<*>>).forEach { (name, part) ->
-                            val contentType = part.headers.remove("Content-Type")
-                            val bodies = if (part.body is Iterable<*>) part.body else listOf(part.body)
-                            bodies.forEach { body ->
-                                val headers = part.headers.toMutableMap() +
-                                    ("Content-Disposition" to "form-data; name=\"$name\"" + if (body is File) "; filename=\"${body.name}\"" else "")
-                                addPart(headers.toHeaders(),
-                                    requestSingleBody(body, contentType))
+                            if (part.body is File) {
+                                val partHeaders = part.headers.toMutableMap() +
+                                    ("Content-Disposition" to "form-data; name=\"$name\"; filename=\"${part.body.name}\"")
+                                val fileMediaType = guessContentTypeFromFile(part.body).toMediaTypeOrNull()
+                                addPart(
+                                    partHeaders.toHeaders(),
+                                    part.body.asRequestBody(fileMediaType)
+                                )
+                            } else {
+                                val partHeaders = part.headers.toMutableMap() +
+                                    ("Content-Disposition" to "form-data; name=\"$name\"")
+                                addPart(
+                                    partHeaders.toHeaders(),
+                                    parameterToString(part.body).toRequestBody(null)
+                                )
                             }
                         }
                     }.build()
-            else -> requestSingleBody(content, mediaType)
-        }
-
-    protected inline fun <reified T> requestSingleBody(content: T, mediaType: String?): RequestBody =
-        when {
-            content is File -> content.asRequestBody((mediaType ?: guessContentTypeFromFile(content)).toMediaTypeOrNull())
             mediaType == FormUrlEncMediaType -> {
                 FormBody.Builder().apply {
                     // content's type *must* be Map<String, PartConfig<*>>
@@ -118,12 +121,16 @@ internal open class ApiClient(val baseUrl: String) {
             return null
         }
         if (T::class.java == File::class.java) {
-            // return tempfile
+            // return tempFile
             // Attention: if you are developing an android app that supports API Level 25 and bellow, please check flag supportAndroidApiLevel25AndBelow in https://openapi-generator.tech/docs/generators/kotlin#config-options
-            val f = java.nio.file.Files.createTempFile("tmp.org.openapitools.client", null).toFile()
-            f.deleteOnExit()
-            body.byteStream().use { java.nio.file.Files.copy(it, f.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING) }
-            return f as T
+            val tempFile = java.nio.file.Files.createTempFile("tmp.org.openapitools.client", null).toFile()
+            tempFile.deleteOnExit()
+            body.byteStream().use { inputStream ->
+                tempFile.outputStream().use { tempFileOutputStream ->
+                    inputStream.copyTo(tempFileOutputStream)
+                }
+            }
+            return tempFile as T
         }
         val bodyContent = body.string()
         if (bodyContent.isEmpty()) {
@@ -137,6 +144,11 @@ internal open class ApiClient(val baseUrl: String) {
     }
 
     protected fun <T> updateAuthParams(requestConfig: RequestConfig<T>) {
+        if (requestConfig.headers[Authorization].isNullOrEmpty()) {
+            accessToken?.let { accessToken ->
+                requestConfig.headers[Authorization] = "Bearer $accessToken "
+            }
+        }
         if (requestConfig.headers["api_key"].isNullOrEmpty()) {
             if (apiKey["api_key"] != null) {
                 if (apiKeyPrefix["api_key"] != null) {
@@ -144,11 +156,6 @@ internal open class ApiClient(val baseUrl: String) {
                 } else {
                     requestConfig.headers["api_key"] = apiKey["api_key"]!!
                 }
-            }
-        }
-        if (requestConfig.headers[Authorization].isNullOrEmpty()) {
-            accessToken?.let { accessToken ->
-                requestConfig.headers[Authorization] = "Bearer $accessToken "
             }
         }
     }
@@ -160,7 +167,7 @@ internal open class ApiClient(val baseUrl: String) {
         updateAuthParams(requestConfig)
 
         val url = httpUrl.newBuilder()
-            .addPathSegments(requestConfig.path.trimStart('/'))
+            .addEncodedPathSegments(requestConfig.path.trimStart('/'))
             .apply {
                 requestConfig.query.forEach { query ->
                     query.value.forEach { queryValue ->
@@ -170,7 +177,7 @@ internal open class ApiClient(val baseUrl: String) {
             }.build()
 
         // take content-type/accept from spec or set to default (application/json) if not defined
-        if (requestConfig.headers[ContentType].isNullOrEmpty()) {
+        if (requestConfig.body != null && requestConfig.headers[ContentType].isNullOrEmpty()) {
             requestConfig.headers[ContentType] = JsonMediaType
         }
         if (requestConfig.headers[Accept].isNullOrEmpty()) {
@@ -178,16 +185,16 @@ internal open class ApiClient(val baseUrl: String) {
         }
         val headers = requestConfig.headers
 
-        if(headers[ContentType].isNullOrEmpty()) {
-            throw kotlin.IllegalStateException("Missing Content-Type header. This is required.")
-        }
-
-        if(headers[Accept].isNullOrEmpty()) {
+        if (headers[Accept].isNullOrEmpty()) {
             throw kotlin.IllegalStateException("Missing Accept header. This is required.")
         }
 
-        // TODO: support multiple contentType options here.
-        val contentType = (headers[ContentType] as String).substringBefore(";").lowercase(Locale.getDefault())
+        val contentType = if (headers[ContentType] != null) {
+            // TODO: support multiple contentType options here.
+            (headers[ContentType] as String).substringBefore(";").lowercase(Locale.US)
+        } else {
+            null
+        }
 
         val request = when (requestConfig.method) {
             RequestMethod.DELETE -> Request.Builder().url(url).delete(requestBody(requestConfig.body, contentType))
@@ -203,7 +210,7 @@ internal open class ApiClient(val baseUrl: String) {
 
         val response = client.newCall(request).execute()
 
-        val accept = response.header(ContentType)?.substringBefore(";")?.lowercase(Locale.getDefault())
+        val accept = response.header(ContentType)?.substringBefore(";")?.lowercase(Locale.US)
 
         // TODO: handle specific mapping types. e.g. Map<int, Class<?>>
         return when {

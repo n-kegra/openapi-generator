@@ -41,6 +41,7 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.*;
 
+import static org.openapitools.codegen.utils.CamelizeOption.LOWERCASE_FIRST_LETTER;
 import static org.openapitools.codegen.utils.StringUtils.camelize;
 
 public abstract class AbstractCSharpCodegen extends DefaultCodegen implements CodegenConfig {
@@ -69,6 +70,10 @@ public abstract class AbstractCSharpCodegen extends DefaultCodegen implements Co
     protected String packageCompany = "OpenAPI";
     protected String packageCopyright = "No Copyright";
     protected String packageAuthors = "OpenAPI";
+    public static final String DATE_FORMAT = "dateFormat";
+    protected String dateFormat = "yyyy'-'MM'-'dd";
+    public static final String DATETIME_FORMAT = "dateTimeFormat";
+    protected String dateTimeFormat = "yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fffffffK";
 
     protected String interfacePrefix = "I";
     protected String enumNameSuffix = "Enum";
@@ -118,7 +123,7 @@ public abstract class AbstractCSharpCodegen extends DefaultCodegen implements Co
         );
 
         mapTypes = new HashSet<>(
-                Arrays.asList("IDictionary")
+                Arrays.asList("IDictionary", "Dictionary")
         );
 
         // NOTE: C# uses camel cased reserved words, while models are title cased. We don't want lowercase comparisons.
@@ -159,8 +164,12 @@ public abstract class AbstractCSharpCodegen extends DefaultCodegen implements Co
                         "decimal",
                         "int?",
                         "int",
+                        "uint",
+                        "uint?",
                         "long?",
                         "long",
+                        "ulong",
+                        "ulong?",
                         "float?",
                         "float",
                         "byte[]",
@@ -196,8 +205,10 @@ public abstract class AbstractCSharpCodegen extends DefaultCodegen implements Co
         typeMapping.put("ByteArray", "byte[]");
         typeMapping.put("boolean", "bool?");
         typeMapping.put("integer", "int?");
-        typeMapping.put("float", "float?");
+        typeMapping.put("UnsignedInteger", "uint?");
+        typeMapping.put("UnsignedLong", "ulong?");
         typeMapping.put("long", "long?");
+        typeMapping.put("float", "float?");
         typeMapping.put("double", "double?");
         typeMapping.put("number", "decimal?");
         typeMapping.put("BigDecimal", "decimal?");
@@ -214,11 +225,12 @@ public abstract class AbstractCSharpCodegen extends DefaultCodegen implements Co
 
         // nullable type
         nullableType = new HashSet<>(
-                Arrays.asList("decimal", "bool", "int", "float", "long", "double", "DateTime", "DateTimeOffset", "Guid")
+                Arrays.asList("decimal", "bool", "int", "uint", "long", "ulong", "float", "double",
+                        "DateTime", "DateTimeOffset", "Guid")
         );
         // value Types
         valueTypes = new HashSet<>(
-                Arrays.asList("decimal", "bool", "int", "float", "long", "double")
+                Arrays.asList("decimal", "bool", "int", "uint", "long", "ulong", "float", "double")
         );
 
         this.setSortParamsByRequiredFlag(true);
@@ -292,7 +304,7 @@ public abstract class AbstractCSharpCodegen extends DefaultCodegen implements Co
         // {{sourceFolder}}
         if (additionalProperties.containsKey(CodegenConstants.SOURCE_FOLDER)) {
             setSourceFolder((String) additionalProperties.get(CodegenConstants.SOURCE_FOLDER));
-            
+
             // TODO: Move to its own option when a parameter for 'testFolder' is added.
             setTestFolder((String) additionalProperties.get(CodegenConstants.SOURCE_FOLDER));
         } else {
@@ -323,6 +335,20 @@ public abstract class AbstractCSharpCodegen extends DefaultCodegen implements Co
             setPackageProductName((String) additionalProperties.get(CodegenConstants.PACKAGE_PRODUCTNAME));
         } else {
             additionalProperties.put(CodegenConstants.PACKAGE_PRODUCTNAME, packageProductName);
+        }
+
+        // {{dateFormat}}
+        if (additionalProperties.containsKey(DATE_FORMAT)) {
+            setDateFormat((String) additionalProperties.get(DATE_FORMAT));
+        } else {
+            additionalProperties.put(DATE_FORMAT, this.dateFormat);
+        }
+
+        // {{dateTimeFormat}}
+        if (additionalProperties.containsKey(DATETIME_FORMAT)) {
+            setDateTimeFormat((String) additionalProperties.get(DATETIME_FORMAT));
+        } else {
+            additionalProperties.put(DATETIME_FORMAT, this.dateTimeFormat);
         }
 
         // {{packageDescription}}
@@ -428,6 +454,17 @@ public abstract class AbstractCSharpCodegen extends DefaultCodegen implements Co
     @Override
     public void postProcessModelProperty(CodegenModel model, CodegenProperty property) {
         super.postProcessModelProperty(model, property);
+        if (property.isInnerEnum && property.items != null) {
+            // format maps of inner enums to include the classname eg: Dictionary<string, MapTest.InnerEnum>
+            property.datatypeWithEnum = property.datatypeWithEnum.replace(property.items.datatypeWithEnum, model.classname + "." + property.items.datatypeWithEnum);
+            property.dataType = property.datatypeWithEnum;
+        }
+        if (property.isMap || property.isContainer) {
+            // maps of enums will be marked both isMap and isEnum, correct that now
+            property.isEnum = false;
+            property.isInnerEnum = false;
+            property.isString = false;
+        }
     }
 
     @Override
@@ -456,10 +493,103 @@ public abstract class AbstractCSharpCodegen extends DefaultCodegen implements Co
     @Override
     public Map<String, ModelsMap> postProcessAllModels(Map<String, ModelsMap> objs) {
         final Map<String, ModelsMap> processed = super.postProcessAllModels(objs);
+
+        // TODO: move the logic of these three methods into patchProperty so all CodegenProperty instances get the same treatment
         postProcessEnumRefs(processed);
         updateValueTypeProperty(processed);
         updateNullableTypeProperty(processed);
+
+        for (Map.Entry<String, ModelsMap> entry : objs.entrySet()) {
+            CodegenModel model = ModelUtils.getModelByName(entry.getKey(), objs);
+            removeCircularReferencesInComposedSchemas(model);
+
+            // https://github.com/OpenAPITools/openapi-generator/issues/12324
+            // TODO: why do these collections contain different instances?
+            // fixing allVars should suffice instead of patching every collection
+            for (CodegenProperty property : model.allVars){
+                patchProperty(model, property);
+            }
+            for (CodegenProperty property : model.vars){
+                patchProperty(model, property);
+            }
+            for (CodegenProperty property : model.readWriteVars){
+                patchProperty(model, property);
+            }
+            for (CodegenProperty property : model.optionalVars){
+                patchProperty(model, property);
+            }
+            for (CodegenProperty property : model.parentVars){
+                patchProperty(model, property);
+            }
+            for (CodegenProperty property : model.requiredVars){
+                patchProperty(model, property);
+            }
+            for (CodegenProperty property : model.readOnlyVars){
+                patchProperty(model, property);
+            }
+            for (CodegenProperty property : model.nonNullableVars){
+                patchProperty(model, property);
+            }
+        }
         return processed;
+    }
+
+    private void patchProperty(CodegenModel model, CodegenProperty property){
+        /**
+        * Hotfix for this issue
+        * https://github.com/OpenAPITools/openapi-generator/issues/12155
+        */
+        if (property.dataType.equals("List") && property.getComposedSchemas() != null && property.getComposedSchemas().getAllOf() != null){
+            List<CodegenProperty> composedSchemas = property.getComposedSchemas().getAllOf();
+            if (composedSchemas.size() == 0) {
+                return;
+            }
+            CodegenProperty composedProperty = composedSchemas.stream().findFirst().get();
+            property.dataType = composedProperty.dataType;
+            property.datatypeWithEnum = composedProperty.datatypeWithEnum;
+            property.isMap = composedProperty.isMap;
+            property.isContainer = composedProperty.isContainer;
+        }
+
+        // fix incorrect data types for maps of maps
+        if (property.datatypeWithEnum.endsWith(", List>") && property.items != null) {
+            property.datatypeWithEnum = property.datatypeWithEnum.replace(", List>", ", " + property.items.datatypeWithEnum + ">");
+            property.dataType = property.datatypeWithEnum;
+        }
+        if (property.datatypeWithEnum.endsWith(", Dictionary>") && property.items != null) {
+            property.datatypeWithEnum = property.datatypeWithEnum.replace(", Dictionary>", ", " + property.items.datatypeWithEnum + ">");
+            property.dataType = property.datatypeWithEnum;
+        }
+
+        // HOTFIX: https://github.com/OpenAPITools/openapi-generator/issues/14944
+        if (property.datatypeWithEnum.equals("decimal")) {
+            property.isDecimal = true;
+        }
+    }
+
+    /** Mitigates https://github.com/OpenAPITools/openapi-generator/issues/13709 */
+    private void removeCircularReferencesInComposedSchemas(CodegenModel cm) {
+        cm.anyOf.removeIf(anyOf -> anyOf.equals(cm.classname));
+        cm.oneOf.removeIf(oneOf -> oneOf.equals(cm.classname));
+        cm.allOf.removeIf(allOf -> allOf.equals(cm.classname));
+
+        CodegenComposedSchemas composedSchemas = cm.getComposedSchemas();
+        if (composedSchemas != null){
+            List<CodegenProperty> anyOf = composedSchemas.getAnyOf();
+            if (anyOf != null) {
+                anyOf.removeIf(p -> p.dataType.equals(cm.classname));
+            }
+
+            List<CodegenProperty> oneOf = composedSchemas.getOneOf();
+            if (oneOf != null){
+                oneOf.removeIf(p -> p.dataType.equals(cm.classname));
+            }
+
+            List<CodegenProperty> allOf = composedSchemas.getAllOf();
+            if (allOf != null){
+                allOf.removeIf(p -> p.dataType.equals(cm.classname));
+            }
+        }
     }
 
     @Override
@@ -472,7 +602,7 @@ public abstract class AbstractCSharpCodegen extends DefaultCodegen implements Co
         if ("string?".equals(dataType)){
             enumVars.forEach((enumVar) -> {
                 enumVar.put("isString", true);
-            }); 
+            });
         }
 
         return enumVars;
@@ -493,7 +623,7 @@ public abstract class AbstractCSharpCodegen extends DefaultCodegen implements Co
         for (Map.Entry<String, ModelsMap> entry : models.entrySet()) {
             CodegenModel model = ModelUtils.getModelByName(entry.getKey(), models);
             if (model.isEnum) {
-                enumRefs.put(entry.getKey(), model);
+                enumRefs.put(model.getClassname(), model);
             }
         }
 
@@ -675,6 +805,15 @@ public abstract class AbstractCSharpCodegen extends DefaultCodegen implements Co
                         var.vendorExtensions.put("x-csharp-value-type", true);
                     }
                 }
+
+                // https://github.com/OpenAPITools/openapi-generator/issues/12324
+                // we should not need to iterate both vars and allVars
+                // the collections dont have the same instance, so we have to do it again
+                for (CodegenProperty var : model.allVars) {
+                    if (!var.isContainer && (nullableType.contains(var.dataType) || var.isEnum)) {
+                        var.vendorExtensions.put("x-csharp-value-type", true);
+                    }
+                }
             }
         }
     }
@@ -712,7 +851,7 @@ public abstract class AbstractCSharpCodegen extends DefaultCodegen implements Co
                             }
                         } else {
                             operation.returnContainer = operation.returnType;
-                            operation.isMap = this.mapTypes.contains(typeMapping);
+                            operation.isMap = this.mapTypes.stream().anyMatch(t -> typeMapping.startsWith(t));
                         }
                     }
 
@@ -894,7 +1033,7 @@ public abstract class AbstractCSharpCodegen extends DefaultCodegen implements Co
 
         // camelize(lower) the variable name
         // pet_id => petId
-        name = camelize(name, true);
+        name = camelize(name, LOWERCASE_FIRST_LETTER);
 
         // for reserved word or word starting with number, append _
         if (isReservedWord(name) || name.matches("^\\d.*")) {
@@ -980,7 +1119,7 @@ public abstract class AbstractCSharpCodegen extends DefaultCodegen implements Co
             }
         } else if (ModelUtils.isStringSchema(p)) {
             if (p.getDefault() != null) {
-                String _default = (String) p.getDefault();
+                String _default = String.valueOf(p.getDefault());
                 if (p.getEnum() == null) {
                     return "\"" + _default + "\"";
                 } else {
@@ -1070,10 +1209,10 @@ public abstract class AbstractCSharpCodegen extends DefaultCodegen implements Co
 
     @Override
     public String toModelName(String name) {
-        // We need to check if import-mapping has a different model for this class, so we use it
+        // We need to check if schema-mapping has a different model for this class, so we use it
         // instead of the auto-generated one.
-        if (importMapping.containsKey(name)) {
-            return importMapping.get(name);
+        if (schemaMapping.containsKey(name)) {
+            return schemaMapping.get(name);
         }
 
         // memoization and lookup in the cache
@@ -1153,6 +1292,14 @@ public abstract class AbstractCSharpCodegen extends DefaultCodegen implements Co
         this.packageProductName = packageProductName;
     }
 
+    public void setDateFormat(String dateFormat) {
+        this.dateFormat = dateFormat;
+    }
+
+    public void setDateTimeFormat(String dateTimeFormat) {
+        this.dateTimeFormat = dateTimeFormat;
+    }
+
     public void setPackageDescription(String packageDescription) {
         this.packageDescription = packageDescription;
     }
@@ -1172,7 +1319,7 @@ public abstract class AbstractCSharpCodegen extends DefaultCodegen implements Co
     public void setSourceFolder(String sourceFolder) {
         this.sourceFolder = sourceFolder;
     }
-    
+
     public void setTestFolder(String testFolder) {
         this.testFolder = testFolder;
     }
@@ -1225,7 +1372,9 @@ public abstract class AbstractCSharpCodegen extends DefaultCodegen implements Co
         // Per: https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/enum
         // The approved types for an enum are byte, sbyte, short, ushort, int, uint, long, or ulong.
         // but we're not supporting unsigned integral types or shorts.
-        if (datatype.startsWith("int") || datatype.startsWith("long") || datatype.startsWith("byte")) {
+        if (datatype.startsWith("int") || datatype.startsWith("uint") ||
+                datatype.startsWith("long") || datatype.startsWith("ulong") ||
+                datatype.startsWith("byte")) {
             return value;
         }
 
@@ -1410,8 +1559,15 @@ public abstract class AbstractCSharpCodegen extends DefaultCodegen implements Co
             } else {
                 example = "new List<" + p.items.dataType + ">()";
             }
+        } else if (Boolean.TRUE.equals(p.isModel)) {
+            example = "new " + p.dataType + "()";
         } else if (Boolean.TRUE.equals(p.isMap)) {
-            example = "new Dictionary<String, " + p.items.dataType + ">";
+            if (p.items != null) {
+                example = "new Dictionary<String, " + p.items.dataType + ">";
+            } else {
+                // default to String if item is not defined
+                example = "new Dictionary<String, String>";
+            }
         }
 
         p.example = example;
@@ -1421,8 +1577,8 @@ public abstract class AbstractCSharpCodegen extends DefaultCodegen implements Co
     public void postProcessParameter(CodegenParameter parameter) {
         super.postProcessParameter(parameter);
 
-        // ensure a method's parameters are marked as nullable when nullable or when nullReferences are enabled
-        // this is mostly needed for reference types used as a method's parameters
+        // TODO: instead of appending the ?
+        // use isNullable, OptionalParameterLambda, or RequiredParameterLambda
         if (!parameter.required && (nullReferenceTypesFlag || nullableType.contains(parameter.dataType))) {
             parameter.dataType = parameter.dataType.endsWith("?")
                 ? parameter.dataType

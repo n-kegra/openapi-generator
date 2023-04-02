@@ -14,9 +14,6 @@ package org.openapitools.model;
 
 import java.util.Objects;
 import java.util.Arrays;
-import io.swagger.annotations.ApiModel;
-import io.swagger.annotations.ApiModelProperty;
-import org.openapitools.model.BigCatAllOf;
 import org.openapitools.model.Cat;
 import com.fasterxml.jackson.annotation.*;
 
@@ -86,7 +83,6 @@ public class BigCat extends Cat {
      * @return kind
      **/
     @Nullable
-    @ApiModelProperty(value = "")
     @JsonProperty(JSON_PROPERTY_KIND)
     @JsonInclude(value = JsonInclude.Include.USE_DEFAULTS)
     public KindEnum getKind() {
@@ -95,7 +91,7 @@ public class BigCat extends Cat {
 
     @JsonProperty(JSON_PROPERTY_KIND)
     @JsonInclude(value = JsonInclude.Include.USE_DEFAULTS)
-       public void setKind(KindEnum kind) {
+    public void setKind(KindEnum kind) {
         this.kind = kind;
     }
 
@@ -143,3 +139,4 @@ public class BigCat extends Cat {
         return visitor.visitBigCat(this);
     }
 }
+

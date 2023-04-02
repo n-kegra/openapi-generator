@@ -48,7 +48,7 @@ namespace Org.OpenAPITools.Model
         /// <param name="breed">breed.</param>
         /// <param name="className">className (required) (default to &quot;Dog&quot;).</param>
         /// <param name="color">color (default to &quot;red&quot;).</param>
-        public Dog(string breed = default(string), string className = "Dog", string color = "red") : base(className, color)
+        public Dog(string breed = default(string), string className = @"Dog", string color = @"red") : base(className, color)
         {
             this.Breed = breed;
             this.AdditionalProperties = new Dictionary<string, object>();
@@ -148,7 +148,7 @@ namespace Org.OpenAPITools.Model
         /// <returns>Validation Result</returns>
         protected IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult> BaseValidate(ValidationContext validationContext)
         {
-            foreach (var x in BaseValidate(validationContext))
+            foreach (var x in base.BaseValidate(validationContext))
             {
                 yield return x;
             }
