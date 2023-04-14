@@ -200,7 +200,7 @@ public:
         {{/isResponseFile}}
         {{/returnType}}
 
-        return std::forward_as_tuple(result, response{{#returnType}}{{^isResponseFile}}, response_object{{/isResponseFile}}{{/returnType}});
+        return std::make_tuple(result, std::move(response){{#returnType}}{{^isResponseFile}}, std::move(response_object){{/isResponseFile}}{{/returnType}});
     }
 
    {{/operation}}
