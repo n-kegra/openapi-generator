@@ -23,7 +23,7 @@ namespace __Helper {
 
     std::string serialize(SerializeStyle style, const std::string name, const Json::Value& value);
     std::vector<std::string> serialize_explode(SerializeStyle style, const std::string name, const Json::Value& value);
-    std::string serialize_collect(SerializeStyle style, std::vector<std::string> strs);
+    std::string serialize_collect(SerializeStyle style, const std::vector<std::string>& strs);
     template<class T>
     Json::Value toJson(const std::vector<T>& obj){
         Json::Value jsonobj;
