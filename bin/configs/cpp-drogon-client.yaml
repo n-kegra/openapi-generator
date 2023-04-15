@@ -1,5 +1,5 @@
 generatorName: cpp-drogon
-outputDir: samples/client/petstore/cpp/drogon
+outputDir: samples/client/petstore/cpp-drogon
 inputSpec: modules/openapi-generator/src/test/resources/3_0/petstore.yaml
 templateDir: modules/openapi-generator/src/main/resources/cpp-drogon
 additionalProperties:
