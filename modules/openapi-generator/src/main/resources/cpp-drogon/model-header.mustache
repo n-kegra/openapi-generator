@@ -32,7 +32,7 @@ struct {{classname}} {
         {{/allowableValues}}
         Unknown,
     } value;
-    {{classname}}() { value = Value::Unknown; };
+    {{classname}}();
     operator Json::Value() const;
     {{classname}}(const Json::Value& __value);
     {{classname}}(const Value __value);
