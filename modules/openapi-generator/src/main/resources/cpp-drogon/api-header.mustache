@@ -178,14 +178,13 @@ public:
         auto [result, response] = this->client->sendRequest(req);
 
         {{#returnType}}
-        {{^isResponseFile}}
-        auto response_json = response->getJsonObject();
-        std::optional<{{{returnType}}}> response_object;
-
-        if (result == drogon::ReqResult::Ok &&
-            200 <= response->getStatusCode() &&
-            300 > response->getStatusCode() &&
-            response_json) {
+        if (result == drogon::ReqResult::Ok && response &&
+            200 <= response->getStatusCode() && response->getStatusCode() < 300) {
+            {{^isResponseFile}}
+            return response;
+            {{/isResponseFile}}
+            {{^isResponseFile}}
+            auto response_json = response->getJsonObject();
             {{#returnContainer}}
             std::vector<{{returnBaseType}}> tmp;
             for (const auto& item : *response_json) {
@@ -194,13 +193,14 @@ public:
             response_object.emplace(std::move(tmp));
             {{/returnContainer}}
             {{^returnContainer}}
-            response_object.emplace(*response_json);
+            return response_json;
             {{/returnContainer}}
+            {{/isResponseFile}}
+        } else {
+            {{! TODO }}
+            throw std::runtime_error("error");
         }
-        {{/isResponseFile}}
         {{/returnType}}
-
-        return std::make_tuple(result, std::move(response){{#returnType}}{{^isResponseFile}}, std::move(response_object){{/isResponseFile}}{{/returnType}});
     }
 
    {{/operation}}
