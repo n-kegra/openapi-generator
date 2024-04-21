@@ -1,4 +1,4 @@
-add_library({{cmakeTarget}} PRIVATE
+add_library({{cmakeTarget}}
     ${CMAKE_CURRENT_SOURCE_DIR}/{{includeDir}}/Helper.cpp
     {{#apiInfo}}
     {{#apis}}
@@ -12,3 +12,4 @@ add_library({{cmakeTarget}} PRIVATE
     {{/modelPackage}}
 )
 target_include_directories({{cmakeTarget}} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries({{cmakeTarget}} PRIVATE Drogon::Drogon)
