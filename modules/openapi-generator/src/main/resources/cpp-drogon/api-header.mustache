@@ -2,8 +2,6 @@
 #define {{prefix}}_{{classname}}_H
 
 #include <drogon/drogon.h>
-#include <drogon/utils/Utilities.h>
-#include <json/json.h>
 #include <string>
 #include <optional>
 #include <{{includeDir}}/Helper.h>
@@ -25,12 +23,11 @@ class {{classname}} {
 
 public:
 
-    {{classname}}(std::string _baseurl_host, std::string _baseurl_path) :
-        baseurl_path(_baseurl_path), client(drogon::HttpClient::newHttpClient(_baseurl_host)) {}
+    {{classname}}(std::string _baseurl_host, std::string _baseurl_path);
     
-    {{classname}}& setBearerToken(std::string _token) { this->bearer_token = _token; return *this; }
-    {{classname}}& setBasicAuth(std::string _username, std::string _password) { this->basic_username = _username; this->basic_password = _password; return *this; }
-    {{classname}}& setApikey(std::string _apikey) { this->apikey = _apikey; return *this; }
+    {{classname}}& setBearerToken(std::string _token);
+    {{classname}}& setBasicAuth(std::string _username, std::string _password);
+    {{classname}}& setApikey(std::string _apikey);
 
 {{#operations}}
     {{#operation}}
@@ -61,164 +58,7 @@ public:
         {{#allParams}}
         const {{^required}}std::optional<{{/required}}{{{dataType}}}{{^required}}>{{/required}}& _{{paramName}}{{^-last}}, {{/-last}}
         {{/allParams}}
-    ){
-        {{#hasBodyParam}}
-        Json::Value json;
-        {{#bodyParams}}
-        {{^required}}if(_{{paramName}}.has_value()) {{/required}}{
-            json = {{#isContainer}}__Helper::toJson{{/isContainer}}(_{{paramName}}{{^required}}.value(){{/required}});
-        }
-        {{/bodyParams}}
-        auto req = drogon::HttpRequest::newHttpJsonRequest(json);
-        {{/hasBodyParam}}
-        {{^hasBodyParam}}
-            {{#hasFormParam}}
-        std::vector<drogon::UploadFile> files;
-                {{#formParams}}
-                    {{#isFile}}
-                        {{^required}}
-        if(_{{paramName}}.has_value())
-                        {{/required}}
-        files.push_back(_{{paramName}}{{^required}}.value(){{/required}});
-                    {{/isFile}}
-                {{/formParams}}
-        auto req = drogon::HttpRequest::newFileUploadRequest(files);
-            {{/hasFormParam}}
-            {{^hasFormParam}}
-        auto req = drogon::HttpRequest::newHttpRequest();
-            {{/hasFormParam}}
-        {{/hasBodyParam}}
-        req->setMethod(drogon::HttpMethod::{{#lambda.titlecase}}{{#lambda.lowercase}}{{httpMethod}}{{/lambda.lowercase}}{{/lambda.titlecase}});
-
-        std::string endpoint_path = "{{path}}";
-        {{#hasQueryParams}}std::vector<std::string> query_strs;{{/hasQueryParams}}
-        {{#authMethods}}
-            {{#isApiKey}}
-                {{#isKeyInQuery}}
-        if (this->apikey.has_value()) {
-            query_strs.push_back("{{name}}="+this->apikey.value());
-        }
-                {{/isKeyInQuery}}
-                {{#isKeyInHeader}}
-        if (this->apikey.has_value()) {
-            req->addHeader("{{name}}", this->apikey.value());
-        }
-                {{/isKeyInHeader}}
-                {{#isKeyInCookie}}
-        if (this->apikey.has_value()) {
-            req->addCookie("{{name}}", this->apikey.value());
-        }
-                {{/isKeyInCookie}}
-            {{/isApiKey}}
-            {{#isBasicBearer}}
-        if (this->bearer_token.has_value()) {
-            req->addHeader("Authorization", "Bearer " + this->bearer_token.value());
-        }
-            {{/isBasicBearer}}
-            {{#isBasicBasic}}
-        if (this->basic_username.has_value() && this->basic_password.has_value()) {
-            std::string credential = this->basic_username.value() + ":" + this->basic_password.value();
-            auto encoded = drogon::utils::base64Encode(
-                reinterpret_cast<const byte*>(credential.c_str()),
-                credential.length());
-            req->addHeader("Authorization", "Basic " + encoded);
-        }
-            {{/isBasicBasic}}
-        {{/authMethods}}
-        {{#allParams}}{{^isBodyParam}}{{^isFile}}
-        {{^required}}if(_{{paramName}}.has_value()) {{/required}}{
-            Json::Value jsonobj = {{#isContainer}}__Helper::toJson{{/isContainer}}(_{{paramName}}{{^required}}.value(){{/required}});
-            {{#style}}
-            constexpr auto style = __Helper::SerializeStyle::{{this}};
-            {{/style}}
-            {{^style}}
-                {{#isPathParam}}
-            constexpr auto style = __Helper::SerializeStyle::simple;
-                {{/isPathParam}}
-                {{#isQueryParam}}
-            constexpr auto style = __Helper::SerializeStyle::form;
-                {{/isQueryParam}}
-                {{#isHeaderParam}}
-            constexpr auto style = __Helper::SerializeStyle::simple;
-                {{/isHeaderParam}}
-                {{#isCookieParam}}
-            constexpr auto style = __Helper::SerializeStyle::form;
-                {{/isCookieParam}}
-                {{#isFormParam}}
-                    {{^isFile}}
-            constexpr auto style = __Helper::SerializeStyle::form;
-                    {{/isFile}}
-                {{/isFormParam}}
-            {{/style}}
-            {{^isExplode}}
-            auto serialized = __Helper::serialize(style, "{{paramName}}", jsonobj);
-                {{#isPathParam}}
-            endpoint_path = std::regex_replace(endpoint_path, std::regex("\\{" "{{paramName}}" "\\}"), serialized);
-                {{/isPathParam}}
-                {{#isQueryParam}}
-            query_strs.push_back(serialized);
-                {{/isQueryParam}}
-                {{#isHeaderParam}}
-            req->addHeader("{{paramName}}", serialized);
-                {{/isHeaderParam}}
-                {{#isCookieParam}}
-            req->addCookie("{{paramName}}", serialized);
-                {{/isCookieParam}}
-                {{#isFormParam}}
-            req->setParameter("{{paramName}}", serialized);
-                {{/isFormParam}}
-            {{/isExplode}}
-            {{#isExplode}}
-            auto serialized_list = __Helper::serialize_explode(style, "{{paramName}}", jsonobj);
-                {{#isPathParam}}
-            endpoint_path = std::regex_replace(endpoint_path, std::regex("{" "{{paramName}}" "}"), 
-                __Helper::serialize_collect(style, serialized_list));
-                {{/isPathParam}}
-                {{#isQueryParam}}
-            query_strs.assign(serialized_list.begin(), serialized_list.end());
-                {{/isQueryParam}}
-                {{#isHeaderParam}}
-            req->addHeader("{{paramName}}", __Helper::serialize_collect(style, serialized_list));
-                {{/isHeaderParam}}
-                {{#isCookieParam}}
-            req->addCookie("{{paramName}}", __Helper::serialize_collect(style, serialized_list));
-                {{/isCookieParam}}
-                {{#isFormParam}}
-            req->setParameter("{{paramName}}", __Helper::serialize_collect(style, serialized_list));
-                {{/isFormParam}}
-            {{/isExplode}}
-        }
-        {{/isFile}}{{/isBodyParam}}{{/allParams}}
-        req->setPath(baseurl_path + endpoint_path{{#hasQueryParams}} + __Helper::serialize_collect(__Helper::SerializeStyle::form, query_strs){{/hasQueryParams}});
-
-        auto [result, response] = this->client->sendRequest(req);
-
-        {{#returnType}}
-        if (result == drogon::ReqResult::Ok && response &&
-            200 <= response->getStatusCode() && response->getStatusCode() < 300) {
-            {{^isResponseFile}}
-            return response;
-            {{/isResponseFile}}
-            {{^isResponseFile}}
-            auto response_json = response->getJsonObject();
-            {{#returnContainer}}
-            std::vector<{{returnBaseType}}> tmp;
-            for (const auto& item : *response_json) {
-                tmp.emplace_back(item.as<{{{returnBaseType}}}>());    
-            }
-            response_object.emplace(std::move(tmp));
-            {{/returnContainer}}
-            {{^returnContainer}}
-            return {{{returnType}}}(*response_json);
-            {{/returnContainer}}
-            {{/isResponseFile}}
-        } else {
-            {{! TODO }}
-            throw std::runtime_error("error");
-        }
-        {{/returnType}}
-    }
-
+    );
    {{/operation}}
 {{/operations}}
 
