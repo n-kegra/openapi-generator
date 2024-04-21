@@ -41,6 +41,8 @@ public:
     {{#description}}
     // {{.}}
     {{/description}}
+    {{#returnType}}
+
     auto {{operationId}}(
         {{#allParams}}
         const {{^required}}std::optional<{{/required}}{{{dataType}}}{{^required}}>{{/required}}& _{{paramName}}{{^-last}}, {{/-last}}
@@ -178,6 +180,22 @@ public:
         auto [result, response] = this->client->sendRequest(req);
 
         {{#returnType}}
+            {{^isResponseFile}}
+        drogon::HttpResponsePtr
+            {{/isResponseFile}}
+            {{^isResponseFile}}
+                {{#returnContainer}}
+        std::vector<{{returnBaseType}}>
+                {{/returnContainer}}
+                {{^returnContainer}}
+        {{returnBaseType}}
+                {{/returnContainer}}
+            {{/isResponseFile}}
+        {{/returnType}}
+        {{^returnType}}
+        void
+        {{/returnType}}
+        {{#returnType}}
         if (result == drogon::ReqResult::Ok && response &&
             200 <= response->getStatusCode() && response->getStatusCode() < 300) {
             {{^isResponseFile}}
@@ -193,7 +211,7 @@ public:
             response_object.emplace(std::move(tmp));
             {{/returnContainer}}
             {{^returnContainer}}
-            return response_json;
+            return {{{returnType}}}(*response_json);
             {{/returnContainer}}
             {{/isResponseFile}}
         } else {
