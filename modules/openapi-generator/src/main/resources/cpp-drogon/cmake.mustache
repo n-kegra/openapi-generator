@@ -7,4 +7,9 @@ target_sources(${PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/{{includeDir}}/apis/{{classname}}.cpp
     {{/apis}}
     {{/apiInfo}}
+    {{#modelPackage}}
+    {{#models}}
+    {{#model}}${CMAKE_CURRENT_SOURCE_DIR}/{{includeDir}}/models/{{classname}}.cpp{{/model}}
+    {{/models}}
+    {{/modelPackage}}
 )

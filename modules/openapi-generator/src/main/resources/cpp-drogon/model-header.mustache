@@ -33,45 +33,12 @@ struct {{classname}} {
         Unknown,
     } value;
     {{classname}}() { value = Value::Unknown; };
-    operator Json::Value() const {
-        return this->toJson();
-    }
-    {{classname}}(const Json::Value& __value) {
-        this->fromJson(__value);
-    }
-    {{classname}}(const Value __value) : value(__value) {}
+    operator Json::Value() const;
+    {{classname}}(const Json::Value& __value);
+    {{classname}}(const Value __value);
 
-    Json::Value toJson() const {
-        switch(this->value) {
-        {{#allowableValues}}
-            {{#values}}
-        case Value::e{{#lambda.titlecase}}{{.}}{{/lambda.titlecase}}:
-            return Json::Value({{#isString}}"{{/isString}}{{.}}{{#isString}}"{{/isString}});
-            {{/values}}
-        {{/allowableValues}}
-        default:
-            return Json::Value(Json::nullValue);
-        }
-    }
-    {{classname}}& fromJson(const Json::Value& _json) {
-    {{#isString}}
-        std::string s = _json.asString();
-    {{/isString}}
-    {{^isString}}
-        auto s = _json.asLargestInt();
-    {{/isString}}
-    {{#allowableValues}}
-        {{#values}}
-        if (s == {{#isString}}"{{/isString}}{{.}}{{#isString}}"{{/isString}}) {
-            this->value = Value::e{{#lambda.titlecase}}{{.}}{{/lambda.titlecase}};
-        } else
-        {{/values}}
-    {{/allowableValues}}
-        {
-            this->value = Value::Unknown;
-        }
-        return (*this);
-    }
+    Json::Value toJson() const;
+    {{classname}}& fromJson(const Json::Value& _json);
 };
 {{/isEnum}}
 {{^isEnum}}
@@ -81,38 +48,11 @@ struct {{classname}} {
     {{/vars}}
 
     {{classname}}() = default;
-    operator Json::Value() const {
-        return this->toJson();
-    }
-    {{classname}}(const Json::Value& __value) {
-        this->fromJson(__value);
-    }
+    operator Json::Value() const;
+    {{classname}}(const Json::Value& __value);
 
-    Json::Value toJson() const {
-        Json::Value _json;
-    {{#vars}}
-        _json["{{baseName}}"] = {{#isContainer}}__Helper::toJson{{/isContainer}}({{name}}{{#isModel}}.toJson(){{/isModel}});
-    {{/vars}}
-        return _json;
-    }
-    {{classname}}& fromJson(const Json::Value& _json) {
-    {{#vars}}
-        {{#isContainer}}
-        for (auto _it = _json["{{baseName}}"].begin(); _it != _json["{{baseName}}"].end(); _it++) {
-            {{name}}.{{#isMap}}emplace{{/isMap}}{{#isArray}}{{#uniqueItems}}emplace{{/uniqueItems}}{{^uniqueItems}}emplace_back{{/uniqueItems}}{{/isArray}}({{#isMap}}_it.name(), {{/isMap}}{{#items}}(*_it){{^isModel}}.as<{{{dataType}}}>(){{/isModel}}{{/items}});    
-        }
-        {{/isContainer}}
-        {{^isContainer}}
-            {{#isModel}}
-        {{name}}.fromJson(_json["{{baseName}}"]);
-            {{/isModel}}
-            {{^isModel}}
-        {{name}} = _json["{{baseName}}"].as<{{{dataType}}}>();
-            {{/isModel}}
-        {{/isContainer}}
-    {{/vars}}
-        return *this;
-    }
+    Json::Value toJson() const;
+    {{classname}}& fromJson(const Json::Value& _json);
 };
 {{/isEnum}}
 {{/model}}
@@ -121,12 +61,5 @@ struct {{classname}} {
 {{#cppNamespace}}
 }
 {{/cppNamespace}}
-{{#models}}
-{{#model}}
-template <> inline {{#cppNamespace}}{{.}}::{{/cppNamespace}}{{classname}} Json::Value::as<{{#cppNamespace}}{{.}}::{{/cppNamespace}}{{classname}}>() const {
-    return {{#cppNamespace}}{{.}}::{{/cppNamespace}}{{classname}}(*this);
-};
-{{/model}}
-{{/models}}
 
 #endif
