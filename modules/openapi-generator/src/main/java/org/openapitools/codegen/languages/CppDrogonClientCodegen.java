@@ -26,6 +26,7 @@ public class CppDrogonClientCodegen extends DefaultCodegen implements CodegenCon
     protected static final String CPP_NAMESPACE_DESC = "C++ namespace (convention: name::space::for::api).";
     protected String cppNamespace = "OpenAPI";
 
+    protected String cmakeTarget = "OpenAPI";
     protected String includeDir = "OpenAPI";
     protected String prefix = "OAPI";
 
@@ -167,6 +168,8 @@ public class CppDrogonClientCodegen extends DefaultCodegen implements CodegenCon
 
         addOption(CPP_NAMESPACE, CPP_NAMESPACE_DESC, this.cppNamespace);
         additionalProperties.put("cppNamespace", cppNamespace);
+        addOption("cmakeTarget", "cmake target name", this.cmakeTarget);
+        additionalProperties.put("cmakeTarget", cmakeTarget);
         addOption("includeDir", "include dir name", this.includeDir);
         additionalProperties.put("includeDir", includeDir);
         addOption("prefix", "header symbol prefix", this.prefix);
@@ -235,6 +238,9 @@ public class CppDrogonClientCodegen extends DefaultCodegen implements CodegenCon
     public void processOpts() {
         super.processOpts();
 
+        if (additionalProperties.containsKey("cmakeTarget")) {
+            cmakeTarget = (String) additionalProperties.get("cmakeTarget");
+        }
         if (additionalProperties.containsKey("cppNamespace")) {
             cppNamespace = (String) additionalProperties.get("cppNamespace");
         }
