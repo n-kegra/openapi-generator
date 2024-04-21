@@ -23,7 +23,7 @@ class {{classname}} {
 
 public:
 
-    {{classname}}(std::string baseurl = {{basePath}});
+    {{classname}}(std::string baseurl = "{{basePath}}");
     
     {{classname}}& setBearerToken(std::string _token);
     {{classname}}& setBasicAuth(std::string _username, std::string _password);
