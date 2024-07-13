@@ -251,11 +251,11 @@ public class CppDrogonClientCodegen extends DefaultCodegen implements CodegenCon
             prefix = (String) additionalProperties.get("prefix");
         }
         
-        apiPackage = includeDir + "/apis";
-        modelPackage = includeDir + "/models";
-        supportingFiles.add(new SupportingFile("helper-header.mustache", includeDir, "Helper.h"));
-        supportingFiles.add(new SupportingFile("helper-source.mustache", includeDir, "Helper.cpp"));
-        supportingFiles.add(new SupportingFile("general-header.mustache", includeDir, "Client.h"));
+        apiPackage = "include/" + includeDir + "/apis";
+        modelPackage = "include/" + includeDir + "/models";
+        supportingFiles.add(new SupportingFile("helper-header.mustache", "src", "Helper.h"));
+        supportingFiles.add(new SupportingFile("helper-source.mustache", "src", "Helper.cpp"));
+        supportingFiles.add(new SupportingFile("general-header.mustache", "include/" + includeDir, "Client.h"));
         supportingFiles.add(new SupportingFile("cmake.mustache", "", "CMakeLists.txt"));
         supportingFiles.add(new SupportingFile("README.mustache", "", "README.md"));
     }
@@ -269,5 +269,27 @@ public class CppDrogonClientCodegen extends DefaultCodegen implements CodegenCon
     @Override
     protected boolean isReservedWord(String word) {
         return word != null && reservedWords.contains(word);
+    }
+
+    protected String getHeaderFolder() {
+        return "include/" + includeDir;
+    }
+
+    protected String getSourceFolder() {
+        return "src";
+    }
+
+    @Override
+    public String apiFilename(String templateName, String tag) {
+        String suffix = apiTemplateFiles().get(templateName);
+        String targetOutDir = suffix.equals(".h") ? getHeaderFolder() : getSourceFolder();
+        return outputFolder + "/" + targetOutDir + "/apis/" + toApiFilename(tag) + suffix;
+    }
+
+    @Override
+    public String modelFilename(String templateName, String modelName) {
+        String suffix = modelTemplateFiles().get(templateName);
+        String targetOutDir = suffix.equals(".h") ? getHeaderFolder() : getSourceFolder();
+        return outputFolder + "/" + targetOutDir + "/models/" + toModelFilename(modelName) + suffix;
     }
 }

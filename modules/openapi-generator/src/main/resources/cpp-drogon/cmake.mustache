@@ -1,15 +1,46 @@
-add_library({{cmakeTarget}}
-    ${CMAKE_CURRENT_SOURCE_DIR}/{{includeDir}}/Helper.cpp
+cmake_minimum_required(VERSION 3.5)
+project({{cmakeTarget}})
+
+set(CMAKE_CXX_STANDARD 20)
+
+add_library(${PROJECT_NAME}
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Helper.cpp
     {{#apiInfo}}
     {{#apis}}
-    ${CMAKE_CURRENT_SOURCE_DIR}/{{includeDir}}/apis/{{classname}}.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/apis/{{classname}}.cpp
     {{/apis}}
     {{/apiInfo}}
     {{#modelPackage}}
     {{#models}}
-    {{#model}}${CMAKE_CURRENT_SOURCE_DIR}/{{includeDir}}/models/{{classname}}.cpp{{/model}}
+    {{#model}}${CMAKE_CURRENT_SOURCE_DIR}/src/models/{{classname}}.cpp{{/model}}
     {{/models}}
     {{/modelPackage}}
 )
-target_include_directories({{cmakeTarget}} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries({{cmakeTarget}} PRIVATE Drogon::Drogon)
+
+find_package(Drogon CONFIG REQUIRED)
+target_link_libraries(${PROJECT_NAME} PRIVATE Drogon::Drogon)
+
+set(PACKAGE_NAME ${PROJECT_NAME})
+# define includes
+target_include_directories(${PROJECT_NAME} PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+)
+
+# install binary
+install(TARGETS ${PROJECT_NAME} EXPORT ${PACKAGE_NAME}Targets
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION bin
+    INCLUDES DESTINATION include
+)
+
+# install headers
+install(DIRECTORY include/ DESTINATION include)
+
+# install config
+install(EXPORT ${PACKAGE_NAME}Targets
+    FILE ${PACKAGE_NAME}Config.cmake
+    NAMESPACE ${PACKAGE_NAME}::
+    DESTINATION lib/cmake/${PACKAGE_NAME}
+)
